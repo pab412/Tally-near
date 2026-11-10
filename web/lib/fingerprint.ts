@@ -7,6 +7,15 @@ export function isFingerprint(value: unknown): value is string {
   return typeof value === "string" && FINGERPRINT_RE.test(value);
 }
 
+/** The fingerprint a link asks for (`/?fp=<fingerprint>`), or null when there is none or it isn't one. */
+export function fingerprintFromParam(value: string | string[] | undefined | null): string | null {
+  const first = Array.isArray(value) ? value[0] : value;
+  return isFingerprint(first) ? first : null;
+}
+
+/** The link that opens a card's record directly: what a Tally card's QR code points to. */
+export const recordPath = (fp: string) => `/?fp=${fp}`;
+
 export async function fingerprint(bytes: BufferSource): Promise<string> {
   const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { fingerprint } from "@/lib/fingerprint";
+import { fingerprint, recordPath } from "@/lib/fingerprint";
 import {
   explorerAccountUrl,
   explorerTxUrl,
@@ -24,7 +24,8 @@ const SAMPLES = [
 const MAX_BYTES = 20 * 1024 * 1024;
 const README = "https://github.com/pab412/Tally-near#try-recording-yourself";
 
-type Card = { name: string; fp: string; preview: string; sample: boolean };
+/** `preview` is null for a card opened from a link: there's a fingerprint, but no picture on this device. */
+type Card = { name: string; fp: string; preview: string | null; sample: boolean };
 type LookState =
   | { phase: "idle" }
   | { phase: "checking" }
@@ -36,12 +37,12 @@ type RecordState =
   | { phase: "done"; record: ProofRecord; txHash: string }
   | { phase: "error"; message: string };
 
-export default function TallyDemo({ contractId, canRecord }: { contractId: string; canRecord: boolean }) {
+export default function TallyDemo({ contractId, canRecord, initialFp }: { contractId: string; canRecord: boolean; initialFp: string | null }) {
   const [tab, setTab] = useState<"lookup" | "record">("lookup");
-  const [card, setCard] = useState<Card | null>(null);
+  const [card, setCard] = useState<Card | null>(initialFp ? { name: "Opened from a link", fp: initialFp, preview: null, sample: false } : null);
   const [hashing, setHashing] = useState(false);
   const [pickError, setPickError] = useState("");
-  const [look, setLook] = useState<LookState>({ phase: "idle" });
+  const [look, setLook] = useState<LookState>(initialFp ? { phase: "checking" } : { phase: "idle" });
   const [txByCard, setTxByCard] = useState<Record<string, string>>({});
   const [dragging, setDragging] = useState(false);
   const objectUrl = useRef<string | null>(null);
@@ -49,6 +50,19 @@ export default function TallyDemo({ contractId, canRecord }: { contractId: strin
   useEffect(() => () => {
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
   }, []);
+
+  // Opened from a link (a card's QR code): look the record up straight away.
+  useEffect(() => {
+    if (!initialFp) return;
+    let live = true;
+    lookup(initialFp, { contractId }).then(
+      (result) => live && setLook({ phase: "done", result }),
+      (err) => live && setLook({ phase: "error", message: err instanceof LookupError ? err.message : "Something went wrong. Try again." }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [initialFp, contractId]);
 
   async function check(fp: string) {
     setLook({ phase: "checking" });
@@ -64,6 +78,7 @@ export default function TallyDemo({ contractId, canRecord }: { contractId: strin
     const fp = await fingerprint(bytes);
     setHashing(false);
     setCard({ name, fp, preview, sample });
+    window.history.replaceState(null, "", recordPath(fp)); // the address bar now links to this card's record
     await check(fp);
   }
 
@@ -128,7 +143,13 @@ export default function TallyDemo({ contractId, canRecord }: { contractId: strin
             onDrop={onDrop}
           >
             <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => void pickFile(e.target.files?.[0])} />
-            {card ? (
+            {card && !card.preview ? (
+              <span className="drop-empty">
+                <UploadIcon />
+                <strong>Opened from a link</strong>
+                <span className="drop-hint">There&apos;s no picture here, only its fingerprint. Got the card? Drop it here to see if it&apos;s the same one.</span>
+              </span>
+            ) : card && card.preview ? (
               <span className="drop-loaded">
                 {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL, never uploaded */}
                 <img src={card.preview} alt={`The card you picked: ${card.name}`} />
@@ -233,6 +254,27 @@ function Barcode({ fp }: { fp: string }) {
   );
 }
 
+/** Copies the link that opens this card's record: what a Tally card's QR code would hold. */
+function CopyLink({ fp }: { fp: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <p className="links">
+      <button
+        type="button"
+        className="btn-secondary"
+        onClick={() => {
+          void navigator.clipboard.writeText(window.location.origin + recordPath(fp)).then(() => setCopied(true));
+        }}
+      >
+        {copied ? "Link copied" : "Copy the link to this record"}
+      </button>
+      <span className="muted" aria-live="polite">
+        {copied ? "Anyone who opens it sees this verdict, straight from NEAR." : "A Tally card's QR code can point here."}
+      </span>
+    </p>
+  );
+}
+
 function VerdictBar({ verdict, keyText }: { verdict: Verdict | null; keyText: string }) {
   return (
     <div className="verdict-bar" data-verdict={verdict ?? "none"}>
@@ -293,6 +335,7 @@ function LookupPanel({
             </a>
             <span className="muted">Check id {look.result.record.latest.check_id}</span>
           </p>
+          <CopyLink fp={look.result.record.fingerprint} />
           {look.result.history.length > 1 && (
             <div className="history">
               <h2>History · {look.result.history.length} entries, oldest first</h2>

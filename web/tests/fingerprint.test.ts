@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fingerprint, isFingerprint } from "@/lib/fingerprint";
+import { fingerprint, fingerprintFromParam, isFingerprint, recordPath } from "@/lib/fingerprint";
 
 const bytes = (s: string) => new TextEncoder().encode(s);
 
@@ -22,6 +22,16 @@ describe("fingerprint", () => {
     edited[10] = 4;
     expect(await fingerprint(copy)).toBe(await fingerprint(card));
     expect(await fingerprint(edited)).not.toBe(await fingerprint(card));
+  });
+
+  it("reads the fingerprint a link asks for, and ignores anything else in its place", () => {
+    const fp = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+    expect(recordPath(fp)).toBe(`/?fp=${fp}`);
+    expect(fingerprintFromParam(fp)).toBe(fp);
+    expect(fingerprintFromParam([fp, "x"])).toBe(fp);
+    expect(fingerprintFromParam(undefined)).toBeNull();
+    expect(fingerprintFromParam("@sample_trader")).toBeNull();
+    expect(fingerprintFromParam(`${fp}<script>`)).toBeNull();
   });
 
   it("refuses anything that isn't a fingerprint", () => {

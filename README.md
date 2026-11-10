@@ -61,6 +61,7 @@ On Windows:
 `web` (Next.js). It looks like [tallypnl.com](https://tallypnl.com) because it is meant to be part of it.
 
 - **Look up a card.** Drop a PnL card picture on the page. Its fingerprint is computed in your browser (the picture is never uploaded), and the page asks the NEAR contract for that fingerprint. You see **Real**, **Unclear** or **Fake** with the date NEAR recorded it, the full history if a verdict was corrected, and a link to the explorer. A card with no record says "Tally hasn't checked this card yet."
+- **Open a record from a link.** `/?fp=<fingerprint>` opens that card's record straight away, with no picture needed. The address bar becomes that link whenever you look a card up, and **Copy the link to this record** copies it. This is what a QR code on a Tally card points to: scan it and you see what NEAR holds for that card.
 - **Record a check** (demo only). Pick a verdict and press Record. A server route signs the `record` call with a limited key that can do nothing else.
 
 Every card on the page is made up and marked SAMPLE.
@@ -76,6 +77,7 @@ npm run dev
 1. Open http://localhost:3000.
 2. Click **Sample A**. You see its fingerprint on the left and the answer from NEAR on the right.
 3. Click the explorer link to see the contract on NEAR testnet.
+4. Open http://localhost:3000/?fp=cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8. That fingerprint has a record on testnet, so the page shows **FAKE**, read live from the contract.
 
 ### Run the tests
 
