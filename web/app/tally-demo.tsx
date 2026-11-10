@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { fingerprint, recordPath } from "@/lib/fingerprint";
 import {
@@ -15,13 +16,13 @@ import {
   type Verdict,
 } from "@/lib/near";
 import { CardPanel } from "./card-panel";
-import { DownloadIcon, ExternalIcon, SealIcon, UploadIcon } from "./icons";
+import { ExternalIcon, SealIcon, UploadIcon } from "./icons";
 import { SwitchedOff, VerdictBar, send, type Card, type LookState } from "./parts";
 
 const SAMPLES = [
-  { file: "sample-card-a.png", label: "Sample A", hint: "corrected" },
-  { file: "sample-card-b.png", label: "Sample B", hint: "checked" },
-  { file: "sample-card-c.png", label: "Sample C", hint: "never checked" },
+  { file: "sample-card-a.png", label: "Sample A", hint: "Corrected once" },
+  { file: "sample-card-b.png", label: "Sample B", hint: "Checked" },
+  { file: "sample-card-c.png", label: "Sample C", hint: "Never checked" },
 ];
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -143,47 +144,50 @@ export default function TallyDemo({
           </button>
         </div>
         <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-          <span className="dot" aria-hidden /> NEAR testnet · {contractId}
+          <span className="dot" aria-hidden /> Live on NEAR testnet
         </a>
       </header>
 
-      <main className="stage">
+      <main className="stage" data-linked={(card && !card.preview) || undefined}>
         <section className="cardside" aria-label="The card">
-          <label
-            className="drop"
-            data-dragging={dragging || undefined}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={onDrop}
-          >
-            <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => void pickFile(e.target.files?.[0])} />
-            {card && !card.preview ? (
-              <span className="drop-empty">
-                <UploadIcon />
-                <strong>Opened from a link</strong>
-                <span className="drop-hint">There&apos;s no picture here, only its fingerprint. Got the card? Drop it here to see if it&apos;s the same one.</span>
-              </span>
-            ) : card && card.preview ? (
-              <span className="drop-loaded">
-                {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL, never uploaded */}
+          <div>
+            <label
+              className="bay"
+              data-dragging={dragging || undefined}
+              data-scanning={hashing || look.phase === "checking" || undefined}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={onDrop}
+            >
+              <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => void pickFile(e.target.files?.[0])} />
+              {card?.preview ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a local object URL or a sample, shown as it is
                 <img src={card.preview} alt={`The card you picked: ${card.name}`} />
-                <span className="drop-name">
-                  {card.sample && <span className="sample-tag">SAMPLE</span>}
-                  {card.name}
+              ) : (
+                <span className="bay-empty">
+                  <UploadIcon />
+                  <strong>{card ? "Opened from a link" : "Drop a PnL card here"}</strong>
+                  <span>
+                    {card
+                      ? "There's no picture, only its fingerprint. Got the card? Drop it here to see if it's the same one."
+                      : "or click to choose a picture. It never leaves your device."}
+                  </span>
                 </span>
-                <span className="drop-hint">Drop another picture, or click to choose one</span>
-              </span>
-            ) : (
-              <span className="drop-empty">
-                <UploadIcon />
-                <strong>Drop a PnL card picture here</strong>
-                <span className="drop-hint">or click to choose one. It stays on your device.</span>
-              </span>
+              )}
+            </label>
+            {card?.preview && (
+              <p className="bay-caption">
+                <b>
+                  {card.sample && <span className="sample-tag">SAMPLE</span>}
+                  {card.sample ? SAMPLES.find((x) => x.file === card.name)?.label : card.name}
+                </b>
+                Drop or click the card to change it
+              </p>
             )}
-          </label>
+          </div>
           {pickError && (
             <p className="field-error" role="alert">
               {pickError}
@@ -191,32 +195,42 @@ export default function TallyDemo({
           )}
 
           <div className="samples">
-            <p className="samples-title">No card to hand? Try a made-up one:</p>
+            <p className="label">No card to hand? Try a made-up one</p>
             <ul>
-              {SAMPLES.map((s) => (
-                <li key={s.file}>
-                  <button type="button" className="sample-btn" onClick={() => void pickSample(s.file)}>
-                    <span className="sample-tag">SAMPLE</span> {s.label} <span className="muted">({s.hint})</span>
+              {SAMPLES.map((x) => (
+                <li key={x.file}>
+                  <button type="button" className="sample-btn" aria-pressed={card?.name === x.file} onClick={() => void pickSample(x.file)}>
+                    <Image src={`/samples/${x.file}`} alt="" width={1600} height={900} sizes="(max-width: 940px) 30vw, 190px" />
+                    <span>
+                      {x.label}
+                      <small>{x.hint}</small>
+                    </span>
                   </button>
-                  <a className="icon-link" href={`/samples/${s.file}`} download aria-label={`Download ${s.label}`}>
-                    <DownloadIcon />
-                  </a>
                 </li>
               ))}
             </ul>
           </div>
 
           <div className="fingerprint" aria-live="polite">
-            <h2>Fingerprint</h2>
+            <p className="label">
+              <span>Fingerprint</span>
+              <span>SHA-256 of the picture, computed on your device</span>
+            </p>
             {hashing ? (
-              <p className="muted">Computing on your device…</p>
+              <p className="muted">Computing…</p>
             ) : card ? (
               <>
-                <p className="hash">{card.fp}</p>
+                <p className="hash" aria-label={card.fp}>
+                  {card.fp.match(/.{8}/g)!.map((group, i) => (
+                    <span key={i} aria-hidden>
+                      {group}
+                    </span>
+                  ))}
+                </p>
                 <Barcode fp={card.fp} />
               </>
             ) : (
-              <p className="muted">The SHA-256 hash of the picture appears here. Only this goes to NEAR.</p>
+              <p className="muted">It appears here once you pick a card. Only this goes to NEAR.</p>
             )}
           </div>
         </section>
@@ -225,7 +239,6 @@ export default function TallyDemo({
           {tab === "lookup" ? (
             <LookupPanel
               look={look}
-              card={card}
               txHash={card ? txByCard[card.fp] : undefined}
               contractId={contractId}
               onRetry={() => card && void check(card.fp)}
@@ -257,7 +270,7 @@ export default function TallyDemo({
       </main>
 
       <footer className="how">
-        <h2>How this works</h2>
+        <h2>How it works</h2>
         <ol>
           <li>Your picture stays on your device. This page computes its fingerprint, a SHA-256 hash, right here.</li>
           <li>The page asks NEAR for that fingerprint. No wallet, no Tally server in between.</li>
@@ -319,14 +332,12 @@ function CopyLink({ fp }: { fp: string }) {
 
 function LookupPanel({
   look,
-  card,
   txHash,
   contractId,
   onRetry,
   onShowCard,
 }: {
   look: LookState;
-  card: Card | null;
   txHash?: string;
   contractId: string;
   onRetry: () => void;
@@ -336,7 +347,10 @@ function LookupPanel({
     <div aria-live="polite">
       <h1 className="panel-title">Did Tally check this card?</h1>
       {look.phase === "idle" && (
-        <p className="lede">{card ? "Ready." : "Drop a card on the left, or try a SAMPLE. The answer comes straight from NEAR."}</p>
+        <>
+          <p className="lede">Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.</p>
+          <VerdictBar tone="none" keyText="RESULT" word="No card yet" />
+        </>
       )}
       {look.phase === "checking" && (
         <div className="strip" role="status">
@@ -362,14 +376,25 @@ function LookupPanel({
         <>
           <VerdictBar tone={look.result.record.latest.verdict} keyText="CHECKED" word={look.result.record.latest.verdict} />
           <p className="verdict-line">
-            Checked by Tally on {formatDay(look.result.record.latest.recorded_at_ms)}: {look.result.record.latest.verdict}
+            Tally checked this card on {formatDay(look.result.record.latest.recorded_at_ms)} and found it {look.result.record.latest.verdict}.
           </p>
-          <p className="links">
-            <a href={txHash ? explorerTxUrl(txHash) : explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-              {txHash ? "See this record on the NEAR explorer" : "See the records on the NEAR explorer"} <ExternalIcon />
-            </a>
-            <span className="muted">Check id {look.result.record.latest.check_id}</span>
-          </p>
+          <dl className="facts">
+            <dt>Recorded</dt>
+            <dd>
+              <time dateTime={new Date(look.result.record.latest.recorded_at_ms).toISOString()}>
+                {formatMoment(look.result.record.latest.recorded_at_ms)}
+              </time>
+              , by NEAR&apos;s clock
+            </dd>
+            <dt>Check id</dt>
+            <dd className="id">{look.result.record.latest.check_id}</dd>
+            <dt>On NEAR</dt>
+            <dd>
+              <a href={txHash ? explorerTxUrl(txHash) : explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
+                {txHash ? "See this record on the explorer" : `See ${contractId} on the explorer`} <ExternalIcon />
+              </a>
+            </dd>
+          </dl>
           {look.held && look.held !== "unknown" && (
             <p className="held">
               <SealIcon />
@@ -384,7 +409,7 @@ function LookupPanel({
           <CopyLink fp={look.result.record.fingerprint} />
           {look.result.history.length > 1 && (
             <div className="history">
-              <h2>History · {look.result.history.length} entries, oldest first</h2>
+              <p className="label">History: {look.result.history.length} entries, oldest first. Nothing is ever removed.</p>
               <ol>
                 {look.result.history.map((p, i, all) => (
                   <li key={i} data-latest={i === all.length - 1 || undefined}>

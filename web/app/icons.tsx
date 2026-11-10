@@ -24,12 +24,6 @@ export const ExternalIcon = () => (
   </svg>
 );
 
-export const DownloadIcon = () => (
-  <svg {...base} width={16} height={16}>
-    <path d="M10 3.5V13M6 9l4 4 4-4M3.5 16.5h13" />
-  </svg>
-);
-
 export const LockIcon = () => (
   <svg {...base} width={16} height={16}>
     <rect x="4" y="9" width="12" height="8" rx="1.5" />
