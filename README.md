@@ -15,7 +15,7 @@ A permanent, public record of every PnL card Tally checks. Built for the NEAR Ha
 
 | Part | Where | State |
 |---|---|---|
-| Proof registry contract | `contracts/proof` | Written, 7 unit tests pass. Not deployed yet. |
+| Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
 
 More parts are planned and will be listed here as they're built.
 
@@ -38,6 +38,21 @@ cargo test
 ```
 
 You should see `7 passed`.
+
+### Build and deploy (testnet)
+
+Needs Rust (`rustup target add wasm32-unknown-unknown`), cargo-near and near-cli-rs.
+
+```
+cd contracts/proof
+cargo near build non-reproducible-wasm --no-abi
+near contract deploy proof.notpab.testnet use-file target/near/tally_proof.wasm with-init-call new json-args '{"attester":"notpab.testnet"}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
+```
+
+On Windows:
+- Set the user environment variable `AWS_LC_SYS_PREBUILT_NASM=1`, or the tests fail to compile ("NASM command not found").
+- Keep `--no-abi`, because cargo-near's ABI step doesn't link on Windows.
+- If you installed cargo-near with npm, copy `cargo-near.exe` from npm's `node_modules\cargo-near\node_modules\.bin_real` into `%USERPROFILE%\.cargo\bin` so that `cargo near` finds it.
 
 ## Built with
 
