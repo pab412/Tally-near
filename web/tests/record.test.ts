@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { handleRecord, newCheckId, type RecordEnv, type Sign } from "@/lib/record";
+import type { DemoEnv } from "@/lib/demo";
+import { handleRecord, newCheckId, type Sign } from "@/lib/record";
 
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
-const ENV: RecordEnv = {
+const ENV: DemoEnv = {
   password: "sample-password",
   account: "attester.testnet",
   key: "ed25519:SAMPLEKEYNOTREAL",

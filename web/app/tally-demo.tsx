@@ -1,20 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { fingerprint, recordPath } from "@/lib/fingerprint";
 import {
+  VERDICTS,
+  LookupError,
   explorerAccountUrl,
   explorerTxUrl,
   formatDay,
   formatMoment,
   lookup,
-  LookupError,
-  VERDICTS,
-  type Lookup,
+  verifiedCard,
   type ProofRecord,
   type Verdict,
 } from "@/lib/near";
-import { DownloadIcon, ExternalIcon, LockIcon, UploadIcon } from "./icons";
+import { CardPanel } from "./card-panel";
+import { DownloadIcon, ExternalIcon, SealIcon, UploadIcon } from "./icons";
+import { SwitchedOff, VerdictBar, send, type Card, type LookState } from "./parts";
 
 const SAMPLES = [
   { file: "sample-card-a.png", label: "Sample A", hint: "corrected" },
@@ -22,23 +24,28 @@ const SAMPLES = [
   { file: "sample-card-c.png", label: "Sample C", hint: "never checked" },
 ];
 const MAX_BYTES = 20 * 1024 * 1024;
-const README = "https://github.com/pab412/Tally-near#try-recording-yourself";
 
-/** `preview` is null for a card opened from a link: there's a fingerprint, but no picture on this device. */
-type Card = { name: string; fp: string; preview: string | null; sample: boolean };
-type LookState =
-  | { phase: "idle" }
-  | { phase: "checking" }
-  | { phase: "done"; result: Lookup }
-  | { phase: "error"; message: string };
+type Tab = "lookup" | "record" | "card";
 type RecordState =
   | { phase: "idle" }
   | { phase: "sending" }
   | { phase: "done"; record: ProofRecord; txHash: string }
   | { phase: "error"; message: string };
 
-export default function TallyDemo({ contractId, canRecord, initialFp }: { contractId: string; canRecord: boolean; initialFp: string | null }) {
-  const [tab, setTab] = useState<"lookup" | "record">("lookup");
+export default function TallyDemo({
+  contractId,
+  cardContractId,
+  canRecord,
+  canMint,
+  initialFp,
+}: {
+  contractId: string;
+  cardContractId: string;
+  canRecord: boolean;
+  canMint: boolean;
+  initialFp: string | null;
+}) {
+  const [tab, setTab] = useState<Tab>("lookup");
   const [card, setCard] = useState<Card | null>(initialFp ? { name: "Opened from a link", fp: initialFp, preview: null, sample: false } : null);
   const [hashing, setHashing] = useState(false);
   const [pickError, setPickError] = useState("");
@@ -51,26 +58,33 @@ export default function TallyDemo({ contractId, canRecord, initialFp }: { contra
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
   }, []);
 
+  /** Asks NEAR about a card: its record on the registry and, when it has one, its verified card. */
+  const ask = useCallback(
+    async (fp: string): Promise<LookState> => {
+      try {
+        const result = await lookup(fp, { contractId });
+        const held = result.found ? await verifiedCard(fp, { contractId: cardContractId }).catch(() => "unknown" as const) : null;
+        return { phase: "done", result, held };
+      } catch (err) {
+        return { phase: "error", message: err instanceof LookupError ? err.message : "Something went wrong. Try again." };
+      }
+    },
+    [contractId, cardContractId],
+  );
+
   // Opened from a link (a card's QR code): look the record up straight away.
   useEffect(() => {
     if (!initialFp) return;
     let live = true;
-    lookup(initialFp, { contractId }).then(
-      (result) => live && setLook({ phase: "done", result }),
-      (err) => live && setLook({ phase: "error", message: err instanceof LookupError ? err.message : "Something went wrong. Try again." }),
-    );
+    void ask(initialFp).then((state) => live && setLook(state));
     return () => {
       live = false;
     };
-  }, [initialFp, contractId]);
+  }, [initialFp, ask]);
 
   async function check(fp: string) {
     setLook({ phase: "checking" });
-    try {
-      setLook({ phase: "done", result: await lookup(fp, { contractId }) });
-    } catch (err) {
-      setLook({ phase: "error", message: err instanceof LookupError ? err.message : "Something went wrong. Try again." });
-    }
+    setLook(await ask(fp));
   }
 
   async function load(name: string, bytes: ArrayBuffer, preview: string, sample: boolean) {
@@ -123,6 +137,9 @@ export default function TallyDemo({ contractId, canRecord, initialFp }: { contra
           </button>
           <button role="tab" id="tab-record" aria-selected={tab === "record"} aria-controls="panel" onClick={() => setTab("record")}>
             Record a check
+          </button>
+          <button role="tab" id="tab-card" aria-selected={tab === "card"} aria-controls="panel" onClick={() => setTab("card")}>
+            Verified card
           </button>
         </div>
         <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
@@ -204,9 +221,26 @@ export default function TallyDemo({ contractId, canRecord, initialFp }: { contra
           </div>
         </section>
 
-        <section className="panel" id="panel" role="tabpanel" aria-labelledby={tab === "lookup" ? "tab-lookup" : "tab-record"}>
+        <section className="panel" id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
           {tab === "lookup" ? (
-            <LookupPanel look={look} card={card} txHash={card ? txByCard[card.fp] : undefined} contractId={contractId} onRetry={() => card && void check(card.fp)} />
+            <LookupPanel
+              look={look}
+              card={card}
+              txHash={card ? txByCard[card.fp] : undefined}
+              contractId={contractId}
+              onRetry={() => card && void check(card.fp)}
+              onShowCard={() => setTab("card")}
+            />
+          ) : tab === "card" ? (
+            <CardPanel
+              key={card?.fp ?? "none"}
+              card={card}
+              look={look}
+              canMint={canMint}
+              cardContractId={cardContractId}
+              onChanged={() => card && void ask(card.fp).then(setLook)}
+              onRetry={() => card && void check(card.fp)}
+            />
           ) : (
             <RecordPanel
               key={card?.fp ?? "none"}
@@ -231,11 +265,19 @@ export default function TallyDemo({ contractId, canRecord, initialFp }: { contra
             Tally writes every check to a NEAR contract. Nobody can change or delete it, Tally included; a correction is added on top and the
             earlier verdicts stay.
           </li>
+          <li>
+            A card found Real can have a verified card: an NFT that can&apos;t be sold, minted only after the contract asks the registry, and burned
+            if the verdict is corrected.
+          </li>
         </ol>
         <p className="muted">
-          Contract:{" "}
+          Contracts:{" "}
           <a href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
             {contractId} <ExternalIcon />
+          </a>{" "}
+          and{" "}
+          <a href={explorerAccountUrl(cardContractId)} target="_blank" rel="noreferrer">
+            {cardContractId} <ExternalIcon />
           </a>{" "}
           on NEAR testnet. Everything marked SAMPLE is made up.
         </p>
@@ -275,27 +317,20 @@ function CopyLink({ fp }: { fp: string }) {
   );
 }
 
-function VerdictBar({ verdict, keyText }: { verdict: Verdict | null; keyText: string }) {
-  return (
-    <div className="verdict-bar" data-verdict={verdict ?? "none"}>
-      <span className="verdict-key">{keyText}</span>
-      <span className="verdict-word">{verdict ?? "No record"}</span>
-    </div>
-  );
-}
-
 function LookupPanel({
   look,
   card,
   txHash,
   contractId,
   onRetry,
+  onShowCard,
 }: {
   look: LookState;
   card: Card | null;
   txHash?: string;
   contractId: string;
   onRetry: () => void;
+  onShowCard: () => void;
 }) {
   return (
     <div aria-live="polite">
@@ -318,14 +353,14 @@ function LookupPanel({
       )}
       {look.phase === "done" && !look.result.found && (
         <>
-          <VerdictBar verdict={null} keyText="NOT CHECKED" />
+          <VerdictBar tone="none" keyText="NOT CHECKED" word="No record" />
           <p className="verdict-line">Tally hasn&apos;t checked this card yet.</p>
           <p className="muted">There is no record for this fingerprint on {contractId}. A copy that differs by a single pixel has a different fingerprint.</p>
         </>
       )}
       {look.phase === "done" && look.result.found && (
         <>
-          <VerdictBar verdict={look.result.record.latest.verdict} keyText="CHECKED" />
+          <VerdictBar tone={look.result.record.latest.verdict} keyText="CHECKED" word={look.result.record.latest.verdict} />
           <p className="verdict-line">
             Checked by Tally on {formatDay(look.result.record.latest.recorded_at_ms)}: {look.result.record.latest.verdict}
           </p>
@@ -335,6 +370,17 @@ function LookupPanel({
             </a>
             <span className="muted">Check id {look.result.record.latest.check_id}</span>
           </p>
+          {look.held && look.held !== "unknown" && (
+            <p className="held">
+              <SealIcon />
+              <span>
+                Has a verified card, held by <strong className="account">{look.held.holder}</strong>.
+              </span>
+              <button type="button" className="link-btn" onClick={onShowCard}>
+                See it
+              </button>
+            </p>
+          )}
           <CopyLink fp={look.result.record.fingerprint} />
           {look.result.history.length > 1 && (
             <div className="history">
@@ -376,18 +422,9 @@ function RecordPanel({
     return (
       <div>
         <h1 className="panel-title">Record a check</h1>
-        <div className="notice">
-          <p className="notice-head">
-            <LockIcon /> Recording is switched off on this copy of the page.
-          </p>
-          <p>
-            Lookups work for everyone. To try recording, run your own copy with your own testnet account and key: the README explains it step by
-            step.
-          </p>
-          <a href={README} target="_blank" rel="noreferrer">
-            Try recording yourself <ExternalIcon />
-          </a>
-        </div>
+        <SwitchedOff head="Recording is switched off on this copy of the page.">
+          Lookups work for everyone. To try recording, run your own copy with your own testnet account and key: the README explains it step by step.
+        </SwitchedOff>
       </div>
     );
   }
@@ -395,20 +432,11 @@ function RecordPanel({
   async function submit() {
     if (!card) return;
     setState({ phase: "sending" });
-    try {
-      const res = await fetch("/api/record", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fingerprint: card.fp, verdict, password }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) return setState({ phase: "error", message: body.error ?? "That didn't work. Try again." });
-      setState({ phase: "done", record: body.record, txHash: body.txHash });
-      setPassword("");
-      onRecorded(card.fp, body.txHash);
-    } catch {
-      setState({ phase: "error", message: "Couldn't reach the server. Check your connection and try again." });
-    }
+    const res = await send<{ record: ProofRecord; txHash: string }>("/api/record", { fingerprint: card.fp, verdict, password });
+    if (!res.ok) return setState({ phase: "error", message: res.message });
+    setState({ phase: "done", ...res.body });
+    setPassword("");
+    onRecorded(card.fp, res.body.txHash);
   }
 
   return (
@@ -421,7 +449,7 @@ function RecordPanel({
         <p className="notice">Pick a card on the left first.</p>
       ) : state.phase === "done" ? (
         <div aria-live="polite">
-          <VerdictBar verdict={state.record.latest.verdict} keyText="RECORDED" />
+          <VerdictBar tone={state.record.latest.verdict} keyText="RECORDED" word={state.record.latest.verdict} />
           <p className="verdict-line">
             Recorded on NEAR as entry {state.record.entries} for this card, check id {state.record.latest.check_id}.
           </p>
@@ -431,6 +459,9 @@ function RecordPanel({
             </a>
             <button type="button" className="btn-secondary" onClick={onShowLookup}>
               Look it up
+            </button>
+            <button type="button" className="btn-secondary" onClick={() => setState({ phase: "idle" })}>
+              Record a correction
             </button>
           </p>
         </div>

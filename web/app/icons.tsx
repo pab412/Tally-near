@@ -36,3 +36,10 @@ export const LockIcon = () => (
     <path d="M6.5 9V6.5a3.5 3.5 0 0 1 7 0V9" />
   </svg>
 );
+
+export const SealIcon = () => (
+  <svg {...base}>
+    <path d="M10 2.5 16 5v4.5c0 3.6-2.5 6.6-6 8-3.5-1.4-6-4.4-6-8V5z" />
+    <path d="m7.2 9.8 2 2 3.6-3.8" />
+  </svg>
+);

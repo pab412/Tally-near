@@ -20,7 +20,7 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
 | Verified card contract (NFT) | `contracts/card` | 18 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). |
 | Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, or record a sample check. 17 tests pass. |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 26 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 More parts are planned and will be listed here as they're built.
 
@@ -100,6 +100,7 @@ On Windows:
 - **Look up a card.** Drop a PnL card picture on the page. Its fingerprint is computed in your browser (the picture is never uploaded), and the page asks the NEAR contract for that fingerprint. You see **Real**, **Unclear** or **Fake** with the date NEAR recorded it, the full history if a verdict was corrected, and a link to the explorer. A card with no record says "Tally hasn't checked this card yet."
 - **Open a record from a link.** `/?fp=<fingerprint>` opens that card's record straight away, with no picture needed. The address bar becomes that link whenever you look a card up, and **Copy the link to this record** copies it. This is what a QR code on a Tally card points to: scan it and you see what NEAR holds for that card.
 - **Record a check** (demo only). Pick a verdict and press Record. A server route signs the `record` call with a limited key that can do nothing else.
+- **Verified card.** Shows whether the card has a verified card and who holds it. With the demo password you can mint one or ask for a recheck, and watch the contract decide: it refuses a card that isn't Real ("The contract refused", in the contract's own words), and it burns a card whose verdict was corrected.
 
 Every card on the page is made up and marked SAMPLE.
 
@@ -123,7 +124,7 @@ cd web
 npm test
 ```
 
-You should see `17 passed`.
+You should see `26 passed`.
 
 ### Try recording yourself
 
@@ -139,6 +140,13 @@ NEAR_ATTESTER_KEY=ed25519:<a key of that account>
 RECORD_PASSWORD=<any password you choose>
 ```
 
+For the **Verified card** tab, deploy `contracts/card` too and add:
+
+```
+NEXT_PUBLIC_CARD_CONTRACT_ID=card.<your-account>.testnet
+NEAR_CARD_KEY=ed25519:<a key of that account that can call mint and recheck on the card contract>
+```
+
 3. Run `npm run dev`, open the **Record a check** tab, pick a sample card, choose a verdict, type your password and press **Record**.
 4. You see the verdict bar say RECORDED with a link to the transaction. Switch to **Look up a card**: the same card now shows that verdict.
 
@@ -148,7 +156,9 @@ Safer than a full-access key: add a function-call key that can only call `record
 near account add-key <your-account>.testnet grant-function-call-access --allowance '0.25 NEAR' --contract-account-id proof.<your-account>.testnet --function-names record autogenerate-new-keypair save-to-legacy-keychain network-config testnet sign-with-legacy-keychain send
 ```
 
-Without `RECORD_PASSWORD`, the account and the key all set, recording is switched off and the page says so. The server refuses any account that isn't on testnet.
+The same for the card contract, with `--contract-account-id card.<your-account>.testnet --function-names mint,recheck`.
+
+Without `RECORD_PASSWORD`, the account and the key all set, recording is switched off and the page says so. Without `NEAR_CARD_KEY`, minting is. The server refuses any account that isn't on testnet.
 
 ## Built with
 

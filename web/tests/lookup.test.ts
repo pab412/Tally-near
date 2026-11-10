@@ -54,7 +54,7 @@ describe("lookup", () => {
 
     const broken = (async () =>
       new Response(JSON.stringify({ jsonrpc: "2.0", id: "tally", error: { message: "boom" } }))) as unknown as typeof fetch;
-    await expect(lookup(FP, { fetch: broken })).rejects.toThrow("NEAR couldn't read the registry");
+    await expect(lookup(FP, { fetch: broken })).rejects.toThrow("NEAR couldn't read the contract");
 
     const down = (async () => new Response("", { status: 503 })) as unknown as typeof fetch;
     await expect(lookup(FP, { fetch: down })).rejects.toThrow("NEAR didn't answer");

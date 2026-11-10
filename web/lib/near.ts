@@ -1,5 +1,5 @@
-// Reading Tally's proof registry on NEAR testnet. Lookups go straight from the browser to a public NEAR RPC
-// node: no server, no wallet, no key.
+// Reading Tally's contracts on NEAR testnet: the proof registry and the verified card. Lookups go straight from the
+// browser to a public NEAR RPC node: no server, no wallet, no key.
 
 import { isFingerprint } from "./fingerprint";
 
@@ -20,7 +20,24 @@ export interface ProofRecord {
 
 export type Lookup = { found: false } | { found: true; record: ProofRecord; history: Proof[] };
 
+/** A verified card: the NFT a card found Real can have (contracts/card). */
+export interface VerifiedCard {
+  fingerprint: string;
+  holder: string;
+  mintedAtMs: number;
+  /** The check it came from. */
+  checkId: string;
+}
+
+/** A token as the card contract's standard NFT views return it. */
+export interface NftToken {
+  token_id: string;
+  owner_id: string;
+  metadata?: { issued_at?: string | null; extra?: string | null } | null;
+}
+
 export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "proof.notpab.testnet";
+export const CARD_CONTRACT_ID = process.env.NEXT_PUBLIC_CARD_CONTRACT_ID || "card.notpab.testnet";
 export const RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC || "https://rpc.testnet.fastnear.com";
 
 const EXPLORER = "https://testnet.nearblocks.io";
@@ -50,7 +67,7 @@ export async function viewCall<T>(method: string, args: object, opts: NearOption
         method: "query",
         params: {
           request_type: "call_function",
-          finality: "final",
+          finality: "optimistic", // the newest block, so a record shows up the moment it is written
           account_id: opts.contractId ?? CONTRACT_ID,
           method_name: method,
           args_base64: btoa(JSON.stringify(args)),
@@ -66,7 +83,7 @@ export async function viewCall<T>(method: string, args: object, opts: NearOption
   const json = await res.json().catch(() => null);
   const bytes = json?.result?.result;
   if (json?.error || json?.result?.error || !Array.isArray(bytes)) {
-    throw new LookupError("NEAR couldn't read the registry. Try again in a moment.");
+    throw new LookupError("NEAR couldn't read the contract. Try again in a moment.");
   }
   return JSON.parse(new TextDecoder().decode(Uint8Array.from(bytes))) as T;
 }
@@ -78,6 +95,30 @@ export async function lookup(fingerprint: string, opts: NearOptions = {}): Promi
   if (!record) return { found: false };
   const history = record.entries > 1 ? await viewCall<Proof[]>("history", { fingerprint }, opts) : [record.latest];
   return { found: true, record, history };
+}
+
+export function toVerifiedCard(token: NftToken): VerifiedCard {
+  let checkId = "";
+  try {
+    checkId = String(JSON.parse(token.metadata?.extra ?? "{}").check_id ?? "");
+  } catch {
+    // a token whose extra isn't JSON still has a holder and a date
+  }
+  return { fingerprint: token.token_id, holder: token.owner_id, mintedAtMs: Number(token.metadata?.issued_at ?? 0), checkId };
+}
+
+/** The verified card for a fingerprint, or null when it has none. `contractId` here is the card contract. */
+export async function verifiedCard(fingerprint: string, opts: NearOptions = {}): Promise<VerifiedCard | null> {
+  if (!isFingerprint(fingerprint)) throw new LookupError("That isn't a card fingerprint.");
+  const token = await viewCall<NftToken | null>("nft_token", { token_id: fingerprint }, { ...opts, contractId: opts.contractId ?? CARD_CONTRACT_ID });
+  return token && toVerifiedCard(token);
+}
+
+const TESTNET_ACCOUNT_RE = /^(?=.{9,64}$)(?:[a-z\d]+(?:[-_][a-z\d]+)*\.)+testnet$/;
+
+/** A named NEAR testnet account, like `name.testnet`. */
+export function isTestnetAccount(value: unknown): value is string {
+  return typeof value === "string" && TESTNET_ACCOUNT_RE.test(value);
 }
 
 /** "10 Nov 2026" in the visitor's time zone (or the one given, for tests). */
