@@ -1,10 +1,12 @@
 # Tally on NEAR
 
-A permanent, public record of every PnL card Tally checks. Built for the NEAR Hackathon (November 2026).
+A permanent, public record of every PnL card Tally checks, and a verified card that only exists while that record says the card is real. Built for the NEAR Hackathon (November 2026).
 
 **The problem.** In crypto, anyone can post a screenshot of a 100x. [Tally](https://tallypnl.com) checks those PnL cards for fakes. Until now, a verdict lived in Tally's own database, so you had to trust Tally not to change it.
 
 **What NEAR adds.** Each check is written to a smart contract on NEAR: the card's fingerprint, the verdict and the time. Nobody can delete or rewrite a record, including Tally. A corrected verdict is added on top, and the earlier ones stay visible. Anyone, a person or an AI agent, can look a card up without asking Tally.
+
+A card Tally found real can also become a **verified card**: an NFT the trader holds. It can't be sold or moved, the contract only mints it after asking the registry itself, and it is burned if the verdict is ever corrected.
 
 ## What existed before, and what's new
 
@@ -16,7 +18,8 @@ A permanent, public record of every PnL card Tally checks. Built for the NEAR Ha
 | Part | Where | State |
 |---|---|---|
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
-
+| Verified card contract (NFT) | `contracts/card` | 18 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). |
+| Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
 | Demo page | `web` | Look a card up on NEAR from your browser, or record a sample check. 17 tests pass. |
 
 More parts are planned and will be listed here as they're built.
@@ -41,9 +44,43 @@ cargo test
 
 You should see `7 passed`.
 
+## The verified card
+
+`contracts/card` (Rust, near-sdk 5, NEP-171 with NEP-177 metadata and NEP-181 enumeration). A verified card is an NFT whose id is the card's fingerprint. It does three things an ordinary NFT doesn't:
+
+- **It can only be minted for a card the registry says is Real.** `mint(fingerprint, owner)` is attester-only, and before anything is minted the contract calls the registry's `get(fingerprint)` itself (a cross-contract call). A Fake, Unclear or never-checked card is refused. Tally's word alone isn't enough.
+- **It can't be transferred or sold.** `nft_transfer` and `nft_transfer_call` always refuse, so a verified card can't be bought.
+- **It answers to the registry for as long as it exists.** Anyone can call `recheck(fingerprint)`. The contract asks the registry again, and if the latest verdict is no longer Real, the card is burned on the spot.
+
+Also:
+
+- `burn(token_id)`: the holder can give their own card up (needs 1 yoctoNEAR, so only a full-access key can do it). Nobody else can burn it, Tally included.
+- `nft_token`, `nft_tokens`, `nft_tokens_for_owner`, `nft_supply_for_owner`, `nft_total_supply`, `nft_metadata`: the standard views, so wallets and explorers can show it.
+- Mints and burns log the standard NEP-171 events.
+
+What is stored: the fingerprint, the NEAR account the trader chose to hold it, and the id of the check it came from. Never a name, a handle from another site or the picture.
+
+### Run the tests
+
+```
+cd contracts/card
+cargo test
+```
+
+You should see `18 passed`. `contracts/types` has 2 more (`cd contracts/types && cargo test`).
+
+Unit tests can't make one contract call another, so the whole flow is also tested on testnet. `web/scripts/e2e-contracts.mjs` deploys both contracts under a testnet account you give it, then checks 19 things for real: a Real card mints after the registry is asked, a Fake or unchecked one is refused, nobody can fake the registry's answer, a transfer is refused, and a corrected verdict burns the card. It needs both `.wasm` files built (below) and a testnet account with about 5 NEAR:
+
+```
+cd web
+node scripts/e2e-contracts.mjs <account.json> ../contracts/proof/target/near/tally_proof.wasm ../contracts/card/target/near/tally_card.wasm
+```
+
+`<account.json>` is `{"id":"<you>.testnet","pub":"ed25519:...","key":"ed25519:..."}` for a throwaway testnet account. Never use a real key.
+
 ### Build and deploy (testnet)
 
-Needs Rust (`rustup target add wasm32-unknown-unknown`), cargo-near and near-cli-rs.
+Needs Rust (`rustup target add wasm32-unknown-unknown`), cargo-near and near-cli-rs. Build with `cargo near`, not plain `cargo build`: near-sdk only uses NEAR's real host functions when cargo-near builds it.
 
 ```
 cd contracts/proof

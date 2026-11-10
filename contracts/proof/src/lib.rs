@@ -13,39 +13,7 @@
 
 use near_sdk::store::{LookupMap, Vector};
 use near_sdk::{env, near, require, AccountId, BorshStorageKey, PanicOnDefault};
-
-/// What Tally concluded about a card.
-#[near(serializers = [json, borsh])]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Verdict {
-    /// The card held up: nothing wrong was found.
-    Real,
-    /// Something doesn't add up, but it isn't proven fake.
-    Unclear,
-    /// Proven fake: an earlier copy, numbers the chart rules out, an edited card.
-    Fake,
-}
-
-/// One entry in a card's history.
-#[near(serializers = [json, borsh])]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Proof {
-    pub verdict: Verdict,
-    /// Tally's id for the check (tallypnl.com/check/<id>), where the evidence is shown.
-    pub check_id: String,
-    /// When NEAR recorded it, in milliseconds since 1970. Set by the chain, not by the caller.
-    pub recorded_at_ms: u64,
-}
-
-/// A card's current verdict with how many times it has been recorded.
-#[near(serializers = [json])]
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Record {
-    pub fingerprint: String,
-    pub latest: Proof,
-    /// 1 for a card recorded once; more when a verdict was later corrected.
-    pub entries: u32,
-}
+pub use tally_types::{is_fingerprint, Proof, ProofRegistry, Record, Verdict};
 
 #[near]
 #[derive(BorshStorageKey)]
@@ -64,12 +32,7 @@ pub struct TallyProof {
     cards: u64,
 }
 
-const FINGERPRINT_LEN: usize = 64; // a SHA-256 hash in hex
 const CHECK_ID_MAX: usize = 32;
-
-fn is_fingerprint(s: &str) -> bool {
-    s.len() == FINGERPRINT_LEN && s.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-}
 
 /// Check ids are short and plain (letters, digits, - and _), so no name or link can be slipped into a record.
 fn is_check_id(s: &str) -> bool {
@@ -106,13 +69,6 @@ impl TallyProof {
         Record { fingerprint, latest: proof, entries }
     }
 
-    /// A card's current verdict, or nothing when Tally has never recorded it.
-    pub fn get(&self, fingerprint: String) -> Option<Record> {
-        let history = self.proofs.get(&fingerprint)?;
-        let latest = history.get(history.len() - 1)?.clone();
-        Some(Record { fingerprint, latest, entries: history.len() })
-    }
-
     /// Every entry for a card, oldest first: the first verdict and each correction since.
     pub fn history(&self, fingerprint: String) -> Vec<Proof> {
         self.proofs.get(&fingerprint).map(|h| h.iter().cloned().collect()).unwrap_or_default()
@@ -125,6 +81,15 @@ impl TallyProof {
 
     pub fn attester(&self) -> AccountId {
         self.attester.clone()
+    }
+}
+
+#[near]
+impl ProofRegistry for TallyProof {
+    fn get(&self, fingerprint: String) -> Option<Record> {
+        let history = self.proofs.get(&fingerprint)?;
+        let latest = history.get(history.len() - 1)?.clone();
+        Some(Record { fingerprint, latest, entries: history.len() })
     }
 }
 
@@ -212,11 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn what_counts_as_a_fingerprint_and_a_check_id() {
-        assert!(is_fingerprint(FP));
-        assert!(!is_fingerprint(&FP.to_uppercase()), "lower case only, so one card has one key");
-        assert!(!is_fingerprint(&FP[..63]));
-        assert!(!is_fingerprint(&format!("{}g", &FP[..63])));
+    fn what_counts_as_a_check_id() {
         assert!(is_check_id("k3x9q2") && is_check_id("K3_x-9"));
         assert!(!is_check_id("") && !is_check_id(&"a".repeat(33)) && !is_check_id("a b") && !is_check_id("a\"b"));
     }
