@@ -20,7 +20,7 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
 | Verified card contract (NFT) | `contracts/card` | 18 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). |
 | Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 26 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 30 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 More parts are planned and will be listed here as they're built.
 
@@ -97,6 +97,7 @@ On Windows:
 
 `web` (Next.js). It looks like [tallypnl.com](https://tallypnl.com) because it is meant to be part of it.
 
+- **How it works** (`/how-it-works`). The whole idea in plain words, with the real parts beside them: a card and its fingerprint, a record read live from NEAR, and what the card contract answers when someone tries to mint a fake.
 - **Look up a card.** Drop a PnL card picture on the page. Its fingerprint is computed in your browser (the picture is never uploaded), and the page asks the NEAR contract for that fingerprint. You see **Real**, **Unclear** or **Fake** with the date NEAR recorded it, the full history if a verdict was corrected, and a link to the explorer. A card with no record says "Tally hasn't checked this card yet."
 - **Open a record from a link.** `/?fp=<fingerprint>` opens that card's record straight away, with no picture needed. The address bar becomes that link whenever you look a card up, and **Copy the link to this record** copies it. This is what a QR code on a Tally card points to: scan it and you see what NEAR holds for that card.
 - **Record a check** (demo only). Pick a verdict and press Record. A server route signs the `record` call with a limited key that can do nothing else.
@@ -124,7 +125,7 @@ cd web
 npm test
 ```
 
-You should see `26 passed`.
+You should see `30 passed`.
 
 ### Try recording yourself
 

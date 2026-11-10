@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { fingerprint, recordPath } from "@/lib/fingerprint";
 import {
@@ -17,7 +18,7 @@ import {
 } from "@/lib/near";
 import { CardPanel } from "./card-panel";
 import { ExternalIcon, SealIcon, UploadIcon } from "./icons";
-import { SwitchedOff, VerdictBar, send, type Card, type LookState } from "./parts";
+import { Contracts, Fingerprint, SwitchedOff, VerdictBar, Wordmark, send, type Card, type LookState } from "./parts";
 
 const SAMPLES = [
   { file: "sample-card-a.png", label: "Sample A", hint: "Corrected once" },
@@ -127,11 +128,7 @@ export default function TallyDemo({
   return (
     <div className="shell">
       <header className="topbar">
-        <p className="wordmark">
-          {/* eslint-disable-next-line @next/next/no-img-element -- Tally's own logo, a small static file */}
-          <img src="/tally-t.png" alt="" width={20} height={23} />
-          Tally <span>on NEAR</span>
-        </p>
+        <Wordmark />
         <div className="tabs" role="tablist" aria-label="What to do">
           <button role="tab" id="tab-lookup" aria-selected={tab === "lookup"} aria-controls="panel" onClick={() => setTab("lookup")}>
             Look up a card
@@ -143,9 +140,12 @@ export default function TallyDemo({
             Verified card
           </button>
         </div>
-        <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-          <span className="dot" aria-hidden /> Live on NEAR testnet
-        </a>
+        <nav className="topnav" aria-label="More">
+          <Link href="/how-it-works">How it works</Link>
+          <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
+            <span className="dot" aria-hidden /> Live on NEAR testnet
+          </a>
+        </nav>
       </header>
 
       <main className="stage" data-linked={(card && !card.preview) || undefined}>
@@ -220,14 +220,7 @@ export default function TallyDemo({
               <p className="muted">Computing…</p>
             ) : card ? (
               <>
-                <p className="hash" aria-label={card.fp}>
-                  {card.fp.match(/.{8}/g)!.map((group, i) => (
-                    <span key={i} aria-hidden>
-                      {group}
-                    </span>
-                  ))}
-                </p>
-                <Barcode fp={card.fp} />
+                <Fingerprint fp={card.fp} />
               </>
             ) : (
               <p className="muted">It appears here once you pick a card. Only this goes to NEAR.</p>
@@ -269,42 +262,7 @@ export default function TallyDemo({
         </section>
       </main>
 
-      <footer className="how">
-        <h2>How it works</h2>
-        <ol>
-          <li>Your picture stays on your device. This page computes its fingerprint, a SHA-256 hash, right here.</li>
-          <li>The page asks NEAR for that fingerprint. No wallet, no Tally server in between.</li>
-          <li>
-            Tally writes every check to a NEAR contract. Nobody can change or delete it, Tally included; a correction is added on top and the
-            earlier verdicts stay.
-          </li>
-          <li>
-            A card found Real can have a verified card: an NFT that can&apos;t be sold, minted only after the contract asks the registry, and burned
-            if the verdict is corrected.
-          </li>
-        </ol>
-        <p className="muted">
-          Contracts:{" "}
-          <a href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-            {contractId} <ExternalIcon />
-          </a>{" "}
-          and{" "}
-          <a href={explorerAccountUrl(cardContractId)} target="_blank" rel="noreferrer">
-            {cardContractId} <ExternalIcon />
-          </a>{" "}
-          on NEAR testnet. Everything marked SAMPLE is made up.
-        </p>
-      </footer>
-    </div>
-  );
-}
-
-function Barcode({ fp }: { fp: string }) {
-  return (
-    <div className="barcode" aria-hidden>
-      {fp.split("").map((c, i) => (
-        <i key={i} style={{ height: `${((parseInt(c, 16) + 2) / 17) * 100}%` }} />
-      ))}
+      <Contracts contractId={contractId} cardContractId={cardContractId} />
     </div>
   );
 }
@@ -348,7 +306,10 @@ function LookupPanel({
       <h1 className="panel-title">Did Tally check this card?</h1>
       {look.phase === "idle" && (
         <>
-          <p className="lede">Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.</p>
+          <p className="lede">
+            Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.{" "}
+            <Link href="/how-it-works">New here? See how it works.</Link>
+          </p>
           <VerdictBar tone="none" keyText="RESULT" word="No card yet" />
         </>
       )}

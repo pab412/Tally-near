@@ -91,7 +91,7 @@ export function CardPanel({
         <>
           {held ? (
             <>
-              <VerdictBar tone="Real" keyText="VERIFIED CARD" word="Held" />
+              <VerdictBar tone="Real" keyText="NFT" word="Held" />
               <p className="verdict-line">
                 Held by <strong className="account">{held.holder}</strong> since {formatDay(held.mintedAtMs)}.
               </p>
@@ -110,7 +110,7 @@ export function CardPanel({
             </>
           ) : (
             <>
-              <VerdictBar tone="none" keyText="VERIFIED CARD" word="None" />
+              <VerdictBar tone="none" keyText="NFT" word="None" />
               <p className="verdict-line">
                 {verdict === "Real"
                   ? "The registry says this card is Real, so it can have one."

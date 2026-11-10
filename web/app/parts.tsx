@@ -1,7 +1,8 @@
 // What the page's panels share: the picked card, the answer from NEAR, the verdict bar and the "switched off" notice.
 
+import Link from "next/link";
 import type { ReactNode } from "react";
-import type { Lookup, Verdict, VerifiedCard } from "@/lib/near";
+import { explorerAccountUrl, type Lookup, type Verdict, type VerifiedCard } from "@/lib/near";
 import { ExternalIcon, LockIcon } from "./icons";
 
 /** `preview` is null for a card opened from a link: there's a fingerprint, but no picture on this device. */
@@ -17,6 +18,57 @@ export type LookState =
   | { phase: "error"; message: string };
 
 export const README = "https://github.com/pab412/Tally-near#try-recording-yourself";
+
+/** The page's name, top left on every page; it links to the demo. */
+export function Wordmark() {
+  return (
+    <Link className="wordmark" href="/">
+      {/* eslint-disable-next-line @next/next/no-img-element -- Tally's own logo, a small static file */}
+      <img src="/tally-t.png" alt="" width={20} height={23} />
+      Tally <span>on NEAR</span>
+    </Link>
+  );
+}
+
+/** A fingerprint as the page shows it: the 64 characters in eight groups, and the same characters as bars. */
+export function Fingerprint({ fp }: { fp: string }) {
+  return (
+    <>
+      <p className="hash" aria-label={fp}>
+        {fp.match(/.{8}/g)!.map((group, i) => (
+          <span key={i} aria-hidden>
+            {group}
+          </span>
+        ))}
+      </p>
+      <div className="barcode" aria-hidden>
+        {fp.split("").map((c, i) => (
+          <i key={i} style={{ height: `${((parseInt(c, 16) + 2) / 17) * 100}%` }} />
+        ))}
+      </div>
+    </>
+  );
+}
+
+/** The foot of every page: where the contracts are. */
+export function Contracts({ contractId, cardContractId, children }: { contractId: string; cardContractId: string; children?: ReactNode }) {
+  return (
+    <footer className="foot">
+      <p>
+        Contracts:{" "}
+        <a href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
+          {contractId} <ExternalIcon />
+        </a>{" "}
+        and{" "}
+        <a href={explorerAccountUrl(cardContractId)} target="_blank" rel="noreferrer">
+          {cardContractId} <ExternalIcon />
+        </a>{" "}
+        on NEAR testnet. Everything marked SAMPLE or Example is made up.
+      </p>
+      {children}
+    </footer>
+  );
+}
 
 /** The one loud thing on the page: a small key block and one big word, coloured by verdict. */
 export function VerdictBar({ tone, keyText, word }: { tone: Verdict | "none"; keyText: string; word: string }) {

@@ -121,6 +121,18 @@ export function isTestnetAccount(value: unknown): value is string {
   return typeof value === "string" && TESTNET_ACCOUNT_RE.test(value);
 }
 
+/** A fingerprint that has a record on proof.notpab.testnet: the README and the explainer open it as a real example. */
+export const DEMO_RECORD_FP = "cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8";
+
+/** How many cards have a record, and how many verified cards exist. Each is null when its contract couldn't be read. */
+export async function liveCounts(opts: NearOptions & { cardContractId?: string } = {}): Promise<{ cards: number | null; verified: number | null }> {
+  const [cards, verified] = await Promise.all([
+    viewCall<number>("cards", {}, opts).catch(() => null),
+    viewCall<string>("nft_total_supply", {}, { ...opts, contractId: opts.cardContractId ?? CARD_CONTRACT_ID }).catch(() => null),
+  ]);
+  return { cards, verified: verified === null ? null : Number(verified) };
+}
+
 /** "10 Nov 2026" in the visitor's time zone (or the one given, for tests). */
 export function formatDay(ms: number, timeZone?: string): string {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone }).format(ms);

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleCard, type SignCard } from "@/lib/card";
 import type { DemoEnv } from "@/lib/demo";
-import { isTestnetAccount, toVerifiedCard, verifiedCard } from "@/lib/near";
+import { isTestnetAccount, liveCounts, toVerifiedCard, verifiedCard } from "@/lib/near";
 
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const ENV: DemoEnv = {
@@ -99,5 +99,24 @@ describe("reading a verified card", () => {
     const none = vi.fn(async () => new Response(JSON.stringify({ result: { result: Array.from(new TextEncoder().encode("null")) } })));
     expect(await verifiedCard(FP, { fetch: none as unknown as typeof globalThis.fetch })).toBeNull();
     expect(toVerifiedCard({ token_id: FP, owner_id: "a.testnet", metadata: { extra: "not json" } })).toEqual({ fingerprint: FP, holder: "a.testnet", mintedAtMs: 0, checkId: "" });
+  });
+});
+
+describe("live counts for the explainer", () => {
+  // answers `cards` on the registry; the card contract answers its supply, or fails when `cardUp` is false
+  const near = (cardUp: boolean) =>
+    vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const { params } = JSON.parse(String(init?.body));
+      if (params.method_name === "nft_total_supply" && !cardUp) return new Response(JSON.stringify({ error: { message: "account does not exist" } }));
+      const value = params.method_name === "cards" ? 12 : "3";
+      return new Response(JSON.stringify({ result: { result: Array.from(new TextEncoder().encode(JSON.stringify(value))) } }));
+    }) as unknown as typeof globalThis.fetch;
+
+  it("reads how many cards are on record and how many verified cards exist", async () => {
+    expect(await liveCounts({ fetch: near(true) })).toEqual({ cards: 12, verified: 3 });
+  });
+
+  it("leaves a count out when its contract can't be read, and never guesses one", async () => {
+    expect(await liveCounts({ fetch: near(false) })).toEqual({ cards: 12, verified: null });
   });
 });
