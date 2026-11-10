@@ -98,6 +98,8 @@ export default function TallyDemo({ contractId, canRecord }: { contractId: strin
     <div className="shell">
       <header className="topbar">
         <p className="wordmark">
+          {/* eslint-disable-next-line @next/next/no-img-element -- Tally's own logo, a small static file */}
+          <img src="/tally-t.png" alt="" width={20} height={23} />
           Tally <span>on NEAR</span>
         </p>
         <div className="tabs" role="tablist" aria-label="What to do">
@@ -295,8 +297,8 @@ function LookupPanel({
             <div className="history">
               <h2>History · {look.result.history.length} entries, oldest first</h2>
               <ol>
-                {look.result.history.map((p, i) => (
-                  <li key={i} data-latest={i === look.result.history.length - 1 || undefined}>
+                {look.result.history.map((p, i, all) => (
+                  <li key={i} data-latest={i === all.length - 1 || undefined}>
                     <span className="verdict-dot" data-verdict={p.verdict} aria-hidden />
                     <span className="history-verdict">{p.verdict}</span>
                     <span className="history-id">{p.check_id}</span>

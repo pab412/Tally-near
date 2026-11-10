@@ -17,6 +17,8 @@ A permanent, public record of every PnL card Tally checks. Built for the NEAR Ha
 |---|---|---|
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
 
+| Demo page | `web` | Look a card up on NEAR from your browser, or record a sample check. 17 tests pass. |
+
 More parts are planned and will be listed here as they're built.
 
 ## The proof registry
@@ -54,9 +56,64 @@ On Windows:
 - Keep `--no-abi`, because cargo-near's ABI step doesn't link on Windows.
 - If you installed cargo-near with npm, copy `cargo-near.exe` from npm's `node_modules\cargo-near\node_modules\.bin_real` into `%USERPROFILE%\.cargo\bin` so that `cargo near` finds it.
 
+## The demo page
+
+`web` (Next.js). It looks like [tallypnl.com](https://tallypnl.com) because it is meant to be part of it.
+
+- **Look up a card.** Drop a PnL card picture on the page. Its fingerprint is computed in your browser (the picture is never uploaded), and the page asks the NEAR contract for that fingerprint. You see **Real**, **Unclear** or **Fake** with the date NEAR recorded it, the full history if a verdict was corrected, and a link to the explorer. A card with no record says "Tally hasn't checked this card yet."
+- **Record a check** (demo only). Pick a verdict and press Record. A server route signs the `record` call with a limited key that can do nothing else.
+
+Every card on the page is made up and marked SAMPLE.
+
+### Run it
+
+```
+cd web
+npm install
+npm run dev
+```
+
+1. Open http://localhost:3000.
+2. Click **Sample A**. You see its fingerprint on the left and the answer from NEAR on the right.
+3. Click the explorer link to see the contract on NEAR testnet.
+
+### Run the tests
+
+```
+cd web
+npm test
+```
+
+You should see `17 passed`.
+
+### Try recording yourself
+
+The hosted demo asks for a password before it records, so strangers can't fill the registry. To try recording, run your own copy against your own contract:
+
+1. Create a NEAR testnet account and deploy the contract to a sub-account of it (see "Build and deploy" above), with your account as the attester.
+2. In `web`, create a file named `.env.local` (it is ignored by git) with:
+
+```
+NEXT_PUBLIC_CONTRACT_ID=proof.<your-account>.testnet
+NEAR_ATTESTER_ACCOUNT=<your-account>.testnet
+NEAR_ATTESTER_KEY=ed25519:<a key of that account>
+RECORD_PASSWORD=<any password you choose>
+```
+
+3. Run `npm run dev`, open the **Record a check** tab, pick a sample card, choose a verdict, type your password and press **Record**.
+4. You see the verdict bar say RECORDED with a link to the transaction. Switch to **Look up a card**: the same card now shows that verdict.
+
+Safer than a full-access key: add a function-call key that can only call `record` on your contract, and use that one.
+
+```
+near account add-key <your-account>.testnet grant-function-call-access --allowance '0.25 NEAR' --contract-account-id proof.<your-account>.testnet --function-names record autogenerate-new-keypair save-to-legacy-keychain network-config testnet sign-with-legacy-keychain send
+```
+
+Without `RECORD_PASSWORD`, the account and the key all set, recording is switched off and the page says so. The server refuses any account that isn't on testnet.
+
 ## Built with
 
-- [near-sdk-rs](https://github.com/near/near-sdk-rs)
+- [near-sdk-rs](https://github.com/near/near-sdk-rs), [near-api-js](https://github.com/near/near-api-js), [Next.js](https://nextjs.org)
 - Written with Claude Code (AI-generated code, reviewed by the team).
 
 ## Licence
