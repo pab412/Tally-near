@@ -20,9 +20,11 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
 | Verified card contract (NFT) | `contracts/card` | 18 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). |
 | Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 31 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 32 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
-More parts are planned and will be listed here as they're built.
+| Paid check for AI agents | not started | Planned: an agent pays a small fee to check a card, and part of it goes to the trader holding that card's verified card. Nothing of it is in the repository yet; the site marks it "In build". |
+
+Each part's state is also shown on the site next to it (Live on testnet, Tested and going live, In build).
 
 ## The proof registry
 
@@ -100,6 +102,7 @@ On Windows:
 - **The front page** (`/`): what this is in one screen, and the way on to each part.
 - **How it works** (`/how-it-works`): three steps beside the real parts they describe: a card and its fingerprint, a card's history, and a record read live from NEAR. Then what goes on NEAR and what never does.
 - **Verified cards** (`/verified-cards`): the NFT's three rules, how a card gets one, and what the contract answers, word for word, when someone tries something it doesn't allow.
+- **For AI agents** (`/agents`): the call that reads a record (free, live, and printed by the same code the site uses), with NEAR's answer read as the page opens. It also describes the paid check that shares its fee with the trader, marked **In build**: that part is not written yet.
 - **Questions** (`/faq`): short answers.
 
 The demo itself is at `/demo`, with three tabs:
@@ -131,7 +134,7 @@ cd web
 npm test
 ```
 
-You should see `31 passed`.
+You should see `32 passed`.
 
 ### Try recording yourself
 

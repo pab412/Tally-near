@@ -53,6 +53,25 @@ export interface NearOptions {
   fetch?: typeof fetch;
 }
 
+/**
+ * The JSON-RPC request that reads a contract. This site sends exactly this, and the For AI agents page prints it, so
+ * what an agent is shown is what works.
+ */
+export function viewRequest(method: string, args: object, contractId: string) {
+  return {
+    jsonrpc: "2.0",
+    id: "tally",
+    method: "query",
+    params: {
+      request_type: "call_function",
+      finality: "optimistic", // the newest block, so a record shows up the moment it is written
+      account_id: contractId,
+      method_name: method,
+      args_base64: btoa(JSON.stringify(args)),
+    },
+  };
+}
+
 /** Calls a read-only contract function and returns its JSON result. */
 export async function viewCall<T>(method: string, args: object, opts: NearOptions = {}): Promise<T> {
   const doFetch = opts.fetch ?? fetch;
@@ -61,18 +80,7 @@ export async function viewCall<T>(method: string, args: object, opts: NearOption
     res = await doFetch(opts.rpcUrl ?? RPC_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: "tally",
-        method: "query",
-        params: {
-          request_type: "call_function",
-          finality: "optimistic", // the newest block, so a record shows up the moment it is written
-          account_id: opts.contractId ?? CONTRACT_ID,
-          method_name: method,
-          args_base64: btoa(JSON.stringify(args)),
-        },
-      }),
+      body: JSON.stringify(viewRequest(method, args, opts.contractId ?? CONTRACT_ID)),
       signal: AbortSignal.timeout(10_000),
     });
   } catch {

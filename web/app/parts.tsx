@@ -30,13 +30,24 @@ export function Wordmark() {
   );
 }
 
-export type PageId = "home" | "how" | "cards" | "faq" | "demo";
+export type PageId = "home" | "how" | "cards" | "agents" | "faq" | "demo";
 
-const PAGES: readonly { id: PageId; href: string; label: string }[] = [
+// `short` is the name on a phone, where the whole menu has to fit one row
+const PAGES: readonly { id: PageId; href: string; label: string; short?: string }[] = [
   { id: "how", href: "/how-it-works", label: "How it works" },
-  { id: "cards", href: "/verified-cards", label: "Verified cards" },
-  { id: "faq", href: "/faq", label: "Questions" },
+  { id: "cards", href: "/verified-cards", label: "Verified cards", short: "Cards" },
+  { id: "agents", href: "/agents", label: "For AI agents", short: "AI agents" },
+  { id: "faq", href: "/faq", label: "Questions", short: "FAQ" },
 ];
+
+/** Where a part of this stands, said plainly next to it, so nothing reads as finished before it is. */
+export function Status({ state }: { state: "live" | "soon" | "build" }) {
+  return (
+    <span className="status" data-state={state}>
+      {state === "live" ? "Live on testnet" : state === "soon" ? "Tested, going live" : "In build"}
+    </span>
+  );
+}
 
 /** The top of every page: the name, the site's few pages, and the way into the demo. */
 export function SiteHeader({ current }: { current: PageId }) {
@@ -46,7 +57,8 @@ export function SiteHeader({ current }: { current: PageId }) {
       <nav className="topnav" aria-label="Pages">
         {PAGES.map((page) => (
           <Link key={page.id} href={page.href} aria-current={current === page.id ? "page" : undefined}>
-            {page.label}
+            <span className={page.short && "nav-long"}>{page.label}</span>
+            {page.short && <span className="nav-short">{page.short}</span>}
           </Link>
         ))}
         <Link className="btn-primary btn-small" href="/demo" aria-current={current === "demo" ? "page" : undefined}>

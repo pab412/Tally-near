@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { REFUSALS } from "@/lib/card-rules";
 import { DEMO_PATH } from "@/lib/fingerprint";
+import Link from "next/link";
 import { DocPage, Exhibit, Onward, PageHead } from "../doc-parts";
-import { VerdictBar } from "../parts";
+import { Status, VerdictBar } from "../parts";
 
 export const metadata: Metadata = {
   title: "Verified cards",
@@ -35,6 +36,21 @@ export default function VerifiedCards() {
             <VerdictBar tone="Real" keyText="NFT" word="Held" />
             <p className="exhibit-note">What the demo shows for a card that has its verified card.</p>
           </Exhibit>
+        </div>
+      </section>
+
+      <section className="split" aria-labelledby="earns">
+        <h2 id="earns">
+          And it earns <Status state="build" />
+        </h2>
+        <div className="split-cols">
+          <div className="prose">
+            <p>When an AI agent pays to check a card, part of the fee goes to the trader who holds that card&apos;s verified card.</p>
+            <p>So a real trader is paid each time their record is checked, and has a reason to get every real card verified. A faker has no badge, so a faker earns nothing.</p>
+          </div>
+          <p className="split-note">
+            This part isn&apos;t live yet. <Link href="/agents">See how the paid check will work.</Link>
+          </p>
         </div>
       </section>
 

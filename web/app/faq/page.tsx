@@ -45,6 +45,17 @@ export default function Questions() {
           <p>Only Tally&apos;s own account can ask for one, and the contract still refuses unless the record on NEAR says Real.</p>
         </details>
         <details>
+          <summary>How does a trader earn from a verified card?</summary>
+          <p>
+            When an AI agent pays to check a card, part of the fee goes to the trader holding that card&apos;s verified card. This part is being
+            built and isn&apos;t live yet. <Link href="/agents">See For AI agents.</Link>
+          </p>
+        </details>
+        <details>
+          <summary>Does it cost anything to look a card up?</summary>
+          <p>No. Reading a record is free for people and for AI agents. The paid check, which shares its fee with the trader, is a separate call that is still being built.</p>
+        </details>
+        <details>
           <summary>Is this on NEAR mainnet?</summary>
           <p>It runs on NEAR testnet for the hackathon. The contracts are the ones that would go to mainnet.</p>
         </details>

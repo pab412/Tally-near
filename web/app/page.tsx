@@ -6,6 +6,7 @@ import { CARD_CONTRACT_ID, CONTRACT_ID } from "@/lib/near";
 import { DocPage, REPO } from "./doc-parts";
 import { ExternalIcon } from "./icons";
 import { LiveCounts } from "./live";
+import { Status } from "./parts";
 
 // The front page (the owner, 2026-11-10: the panther page is what people should see first, and "I dont like how
 // everything is on the same page"): the headline, the three things this is, and the way on to each. The detail
@@ -23,8 +24,8 @@ export default function Home() {
         <div>
           <h1>Receipts nobody can edit.</h1>
           <p className="doc-lede">
-            Tally checks crypto PnL cards for fakes. On NEAR, every verdict becomes a public record that nobody can change, Tally included. And a card
-            that&apos;s real can earn a badge that can&apos;t be bought.
+            Tally catches fake crypto PnL cards. Every verdict is saved on NEAR, where nobody can change it, Tally included. A card that&apos;s real
+            earns its trader a badge that can&apos;t be bought.
           </p>
           <p className="doc-cta">
             <Link className="btn-primary" href={DEMO_PATH}>
@@ -48,22 +49,25 @@ export default function Home() {
         />
       </section>
 
-      <section className="trio" aria-label="What this is">
+      <section className="trio" aria-label="The three parts">
         <ul>
           <li>
-            <h2>A record nobody can edit</h2>
-            <p>Every verdict Tally reaches is written to NEAR. It can be added to, never changed or removed.</p>
+            <Status state="live" />
+            <h2>Every check is saved on NEAR</h2>
+            <p>Tally checks a PnL card and writes the verdict, real or fake, to NEAR. Nobody can edit or delete it, Tally included.</p>
             <Link href="/how-it-works">How it works</Link>
           </li>
           <li>
-            <h2>A badge that can&apos;t be bought</h2>
-            <p>A real card can earn a verified card: an NFT the contract only mints for a real card, and burns if the verdict changes.</p>
+            <Status state="soon" />
+            <h2>Real cards earn a badge</h2>
+            <p>A real card earns its trader a verified card: an NFT that can&apos;t be bought or faked, and that burns if the verdict ever changes.</p>
             <Link href="/verified-cards">Verified cards</Link>
           </li>
           <li>
-            <h2>Anyone can check</h2>
-            <p>Drop a card and NEAR answers. No account, no wallet, and no Tally server in between.</p>
-            <Link href={DEMO_PATH}>Open the demo</Link>
+            <Status state="build" />
+            <h2>AI agents pay to check</h2>
+            <p>Before an AI agent trusts a trader, it pays a small fee to check their card on NEAR. Part of the fee goes to the trader.</p>
+            <Link href="/agents">For AI agents</Link>
           </li>
         </ul>
       </section>

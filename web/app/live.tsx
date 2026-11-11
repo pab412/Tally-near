@@ -4,7 +4,7 @@
 // verdict is whatever the contracts answer when the page is open, and says so when they can't be reached.
 
 import { useEffect, useState } from "react";
-import { formatMoment, liveCounts, lookup, type Lookup } from "@/lib/near";
+import { formatMoment, liveCounts, lookup, viewCall, type Lookup, type ProofRecord } from "@/lib/near";
 import { VerdictBar } from "./parts";
 
 /** A real record's verdict, read from the proof registry. */
@@ -35,6 +35,26 @@ export function LiveRecord({ fp, contractId }: { fp: string; contractId: string 
         <dd className="id">{latest.check_id}</dd>
       </dl>
     </>
+  );
+}
+
+/** The contract's answer for a card exactly as an agent receives it, once decoded: plain JSON, read now. */
+export function LiveAnswer({ fp, contractId }: { fp: string; contractId: string }) {
+  const [answer, setAnswer] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    viewCall<ProofRecord | null>("get", { fingerprint: fp }, { contractId }).then(
+      (record) => live && setAnswer(JSON.stringify(record, null, 2)),
+      () => live && setAnswer("NEAR couldn't be reached just now."),
+    );
+    return () => {
+      live = false;
+    };
+  }, [fp, contractId]);
+  return (
+    <pre className="code" aria-live="polite">
+      <code>{answer ?? "Asking NEAR…"}</code>
+    </pre>
   );
 }
 

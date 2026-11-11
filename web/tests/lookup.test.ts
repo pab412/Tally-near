@@ -64,3 +64,17 @@ describe("lookup", () => {
     expect(formatDay(AT, "UTC")).toBe("10 Nov 2026");
   });
 });
+
+describe("the request an AI agent is shown", () => {
+  it("is the one the site sends: a view call for the card's fingerprint on the proof contract", async () => {
+    const { viewRequest } = await import("@/lib/near");
+    const req = viewRequest("get", { fingerprint: FP }, "proof.sample.testnet");
+    expect(req.params).toMatchObject({ request_type: "call_function", account_id: "proof.sample.testnet", method_name: "get" });
+    expect(JSON.parse(atob(req.params.args_base64))).toEqual({ fingerprint: FP });
+
+    const near = fakeNear({ get: null });
+    await lookup(FP, { fetch: near.fetch, contractId: "proof.sample.testnet" });
+    const sent = JSON.parse(String((near.fetch as unknown as { mock: { calls: [unknown, RequestInit][] } }).mock.calls[0][1].body));
+    expect(sent).toEqual(req);
+  });
+});

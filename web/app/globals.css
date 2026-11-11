@@ -41,7 +41,7 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 .topnav>a[aria-current]:not(.btn-primary)::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand)}
 .topnav>a.btn-primary{white-space:nowrap}.nav-short{display:none}
 .topnav>a.btn-primary[aria-current]{border-color:var(--brand)}
-@media(max-width:700px){.nav-long{display:none}.nav-short{display:inline}.topnav{width:100%;justify-content:space-between;gap:0 12px;font-size:.875rem}.topnav>a:not(.btn-primary){min-height:48px}.topnav>a.btn-primary{min-height:36px;padding:0 12px}}
+@media(max-width:760px){.nav-long{display:none}.nav-short{display:inline}.topnav{width:100%;justify-content:space-between;gap:0 10px;font-size:.875rem}.topnav>a:not(.btn-primary){min-height:48px}.topnav>a.btn-primary{min-height:36px;padding:0 12px}}
 
 /* the demo's own bar: its three tabs, and where it is reading from */
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 24px;margin-top:28px;border-bottom:1px solid var(--border)}
@@ -226,10 +226,21 @@ a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:v
 .ticks li{position:relative;padding:11px 0 11px 26px;border-bottom:1px solid var(--border);color:var(--text-secondary)}
 .ticks li::before{content:"";position:absolute;left:2px;top:19px;width:8px;height:8px;background:var(--green)}
 .ticks-no li::before{background:none;border:1px solid var(--text-muted)}
-/* the front page's three things: what this is, and the page for each */
+/* where a part stands: said in words, with a small square as a second cue */
+.status{display:inline-flex;align-items:center;gap:8px;color:var(--text-muted);font:500 .75rem/1 var(--f-ui);letter-spacing:0;white-space:nowrap;vertical-align:middle}
+.status::before{content:"";width:7px;height:7px;background:var(--text-muted)}
+.status[data-state=live]{color:var(--green)}.status[data-state=live]::before{background:var(--green)}
+.status[data-state=soon]{color:var(--amber)}.status[data-state=soon]::before{background:var(--amber)}
+.status[data-state=build]::before{background:none;border:1px solid var(--text-muted)}
+.split h2 .status{margin-left:14px}
+/* a request or an answer, as text to copy */
+.code{margin:0;padding:14px 16px;border:1px solid var(--border);border-radius:var(--r);background:rgba(8,9,12,.7);color:var(--text-secondary);font:400 .8125rem/1.6 var(--f-mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.exhibit .code+.label{margin-top:4px}
+/* the front page's three parts: what each is, where it stands, and the page for it */
 .trio{padding:24px 0 0}
 .trio ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 56px;margin:0;padding:0;list-style:none}
-.trio li{display:flex;flex-direction:column;padding-top:24px;border-top:1px solid var(--border-strong)}
+.trio li{display:flex;flex-direction:column;padding-top:20px;border-top:1px solid var(--border-strong)}
+.trio .status{margin-bottom:18px}
 .trio h2{font-size:1.375rem;letter-spacing:-.03em}
 .trio p{margin:12px 0 20px;color:var(--text-secondary);line-height:1.55}
 .trio a{margin-top:auto;align-self:flex-start;font-weight:500}
