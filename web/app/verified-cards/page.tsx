@@ -53,7 +53,7 @@ export default function VerifiedCards() {
       </Section>
 
       <Section id="rules" title="Three rules, enforced by the contract">
-        <ul className="trio">
+        <ul className="three">
           <li>
             <h3>Earned, never bought</h3>
             <p>It&apos;s only minted for a real card. The contract asks the record on NEAR itself.</p>
