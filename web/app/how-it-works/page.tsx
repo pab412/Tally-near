@@ -79,16 +79,16 @@ export default function HowItWorks() {
               </a>
             </p>
           </div>
-          <Exhibit example>
-            <div className="bay bay-still" data-play>
-              <Image src={`/samples/${SAMPLE}`} alt="A made-up PnL card showing a 38.21% gain" width={1600} height={900} sizes="(max-width: 940px) 92vw, 520px" priority />
-            </div>
-            <div className="fingerprint">
-              <p className="label">Its fingerprint</p>
-              <Fingerprint fp={SAMPLE_FP} />
-            </div>
-            <VerdictBar tone="Real" keyText="CHECKED" word="Real" />
-          </Exhibit>
+          {/* Tally's own panther, drawn for this page: holding up a card's verified badge */}
+          <Image
+            className="doc-art"
+            src="/art/panther-verified.webp"
+            alt="Tally's black panther holding up a phone that shows a green verified badge"
+            width={1800}
+            height={1195}
+            sizes="(max-width: 940px) 100vw, 900px"
+            priority
+          />
         </section>
 
         <section className="doc-band">
@@ -103,9 +103,12 @@ export default function HowItWorks() {
           n={1}
           title="A card becomes a fingerprint"
           visual={
-            <Exhibit>
+            <Exhibit example>
+              <div className="bay bay-still">
+                <Image src={`/samples/${SAMPLE}`} alt="A made-up PnL card showing a 38.21% gain" width={1600} height={900} sizes="(max-width: 940px) 92vw, 620px" />
+              </div>
               <div className="fingerprint">
-                <p className="label">This card</p>
+                <p className="label">This card&apos;s fingerprint</p>
                 <Fingerprint fp={SAMPLE_FP} />
               </div>
               <div className="fingerprint">

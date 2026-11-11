@@ -165,6 +165,7 @@ Without `RECORD_PASSWORD`, the account and the key all set, recording is switche
 
 - [near-sdk-rs](https://github.com/near/near-sdk-rs), [near-api-js](https://github.com/near/near-api-js), [Next.js](https://nextjs.org)
 - Written with Claude Code (AI-generated code, reviewed by the team).
+- The panther picture on `/how-it-works` is Tally's own mascot, drawn for this page with an AI image tool (Higgsfield) from Tally's existing art.
 
 ## Licence
 
