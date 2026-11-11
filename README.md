@@ -20,8 +20,8 @@ An AI agent can pay for a check with the **paid check** contract. Its owner load
 | Part | Where | State |
 |---|---|---|
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
-| Verified card contract (NFT) | `contracts/card` | 30 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). Each token links to its picture and can hold money. Not yet deployed at `card.notpab.testnet`. |
-| Paid check contract | `contracts/check` | 21 unit tests pass, and the whole flow passes on testnet in the same run, with an agent whose key can only pay for checks. Not yet deployed at `check.notpab.testnet`. |
+| Verified card contract (NFT) | `contracts/card` | 30 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). Each token links to its picture and can hold money. Live on testnet at `card.notpab.testnet`. |
+| Paid check contract | `contracts/check` | 21 unit tests pass, and the whole flow passes on testnet in the same run, with an agent whose key can only pay for checks. Live on testnet at `check.notpab.testnet`. |
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, and how the paid check talks to the card contract. 3 unit tests pass. |
 | Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 46 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
@@ -97,16 +97,51 @@ cargo near build non-reproducible-wasm --no-abi
 near contract deploy proof.notpab.testnet use-file target/near/tally_proof.wasm with-init-call new json-args '{"attester":"notpab.testnet"}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
 ```
 
-The card contract is built the same way in `contracts/card` and deployed to its own account, which needs about 2.5 NEAR for storage. Its `new` takes three things: who may mint, which registry to ask, and where pictures are served from (an `https://` address with no slash at the end):
+The card contract and the paid check are built the same way, each in its own folder:
 
 ```
+cd contracts/card
+cargo test
+cargo near build non-reproducible-wasm --no-abi
+cd ../check
+cargo test
+cargo near build non-reproducible-wasm --no-abi
+```
+
+Each one gets its own account, paid for by `notpab.testnet`. The card contract needs about 2.5 NEAR for storage, and the paid check about 2 NEAR:
+
+```
+near account create-account fund-myself card.notpab.testnet '2.7 NEAR' autogenerate-new-keypair save-to-legacy-keychain sign-as notpab.testnet network-config testnet sign-with-legacy-keychain send
+near account create-account fund-myself check.notpab.testnet '2 NEAR' autogenerate-new-keypair save-to-legacy-keychain sign-as notpab.testnet network-config testnet sign-with-legacy-keychain send
+```
+
+The card contract's `new` takes three things: who may mint, which registry to ask, and where pictures are served from (an `https://` address with no slash at the end):
+
+```
+cd contracts/card
 near contract deploy card.notpab.testnet use-file target/near/tally_card.wasm with-init-call new json-args '{"attester":"notpab.testnet","registry":"proof.notpab.testnet","pictures":"https://tally-near.vercel.app"}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
 ```
 
-The paid check is built the same way in `contracts/check`, and its account needs about 2 NEAR. Its `new` takes who collects the contract's share, the registry, the card contract, the fee in yoctoNEAR (here 0.01 NEAR) and the trader's share in percent:
+The paid check's `new` takes who collects the contract's share, the registry, the card contract, the fee in yoctoNEAR (here 0.01 NEAR) and the trader's share in percent:
 
 ```
+cd contracts/check
 near contract deploy check.notpab.testnet use-file target/near/tally_check.wasm with-init-call new json-args '{"owner":"notpab.testnet","registry":"proof.notpab.testnet","cards":"card.notpab.testnet","fee":"10000000000000000000000","trader_percent":50}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
+```
+
+The site signs with two function-call keys on `notpab.testnet`, each with a 0.25 NEAR allowance: one that can only call `record` on the registry, and one that can only call `mint` and `recheck` on the card contract. The key the site used before is then deleted:
+
+```
+near account add-key notpab.testnet grant-function-call-access --allowance '0.25 NEAR' --contract-account-id proof.notpab.testnet --function-names 'record' autogenerate-new-keypair save-to-legacy-keychain network-config testnet sign-with-legacy-keychain send
+near account add-key notpab.testnet grant-function-call-access --allowance '0.25 NEAR' --contract-account-id card.notpab.testnet --function-names 'mint, recheck' autogenerate-new-keypair save-to-legacy-keychain network-config testnet sign-with-legacy-keychain send
+near account delete-keys notpab.testnet public-keys ed25519:Er3ygqWK5WkCC7bCoHqQKh6kTk9ce3uuC3JUcYkjKCtM network-config testnet sign-with-legacy-keychain send
+```
+
+To check both are live:
+
+```
+near contract call-function as-read-only check.notpab.testnet terms json-args '{}' network-config testnet now
+near contract call-function as-read-only card.notpab.testnet nft_metadata json-args '{}' network-config testnet now
 ```
 
 On Windows:
