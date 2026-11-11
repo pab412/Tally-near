@@ -10,6 +10,34 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 
 An AI agent can pay for a check with the **paid check** contract. Its owner loads a little credit and gives the agent a key that can only pay for checks, so that credit is all it can ever spend. Part of each fee goes into the trader's verified card: the NFT itself holds the money, pays it out only while the card is still Real, and loses it if it is burned.
 
+## Check it yourself in 60 seconds
+
+Everything below is live on NEAR testnet. The first two need nothing installed.
+
+**1. Read a record straight from NEAR.** No account, no key and no Tally server in between:
+
+```
+curl -s https://rpc.testnet.fastnear.com -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":"tally","method":"query","params":{"request_type":"call_function","finality":"final","account_id":"proof.notpab.testnet","method_name":"get","args_base64":"eyJmaW5nZXJwcmludCI6Ijc3NmI3MjlhOThhNDU1NzZlNDM4MWM3NzMyZDRiMGVhZmNiZWM0ZWVjYzExNGM3OTExNmQ5YTcwMDIyNThkYmUifQ=="}}' | python3 -c "import sys,json; print(bytes(json.load(sys.stdin)['result']['result']).decode())"
+```
+
+You should see sample card A's record: `"verdict":"Real"`, `"check_id":"sample-a-appeal"`, `"entries":2`. Two entries because it was first recorded Fake and then corrected; the first verdict is still there.
+
+**2. See it in the browser.** Open https://tally-near.vercel.app/demo.
+- Click **Sample A**: you see **Real**, and a history with the earlier **Fake** still in it.
+- Click **Sample B**, then the **Verified card** tab: you see **Held**, the picture wallets show for the NFT, and what the card holds from paid checks.
+- Click **Sample C**: you see **No record**.
+
+**3. Run the demo agent.** It pays for two checks with a key that can do nothing else:
+
+```
+git clone https://github.com/pab412/Tally-near
+cd Tally-near/web
+npm install
+node scripts/demo-agent.mjs
+```
+
+You should see `DON'T COPY` for the card recorded Fake, `COPY` for sample card B with part of the fee going into its verified card, and NEAR refusing when the agent tries to send its owner's money away.
+
 ## What existed before, and what's new
 
 - **Before the hackathon:** Tally itself (the website, the card reading, the checks). It runs on Vercel and reads Solana trades. None of that is in this repository or part of this entry.
