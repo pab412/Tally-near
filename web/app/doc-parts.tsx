@@ -1,4 +1,4 @@
-// What the site's reading pages share: the page frame, a page's title, a numbered step and a framed exhibit.
+// What the site's reading pages share: the page frame, a page's title, a numbered step and the way onward.
 
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -49,16 +49,6 @@ export function Step({ n, title, children, visual }: { n: number; title: string;
         <div className="step-visual">{visual}</div>
       </div>
     </section>
-  );
-}
-
-/** A framed piece of the product shown as an illustration. Anything made up inside it is marked Example. */
-export function Exhibit({ example, children }: { example?: boolean; children: ReactNode }) {
-  return (
-    <div className="exhibit">
-      {example && <span className="exhibit-tag">Example</span>}
-      {children}
-    </div>
   );
 }
 

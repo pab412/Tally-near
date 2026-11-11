@@ -3,8 +3,8 @@
 import { useState } from "react";
 import type { CardOutcome } from "@/lib/card";
 import { explorerAccountUrl, explorerTxUrl, formatDay, isTestnetAccount } from "@/lib/near";
-import { ExternalIcon } from "./icons";
-import { SwitchedOff, VerdictBar, send, type Card, type LookState } from "./parts";
+import { AlertIcon, ExternalIcon, SealIcon } from "./icons";
+import { Busy, Fact, Finding, Frame, Note, SwitchedOff, send, type Card, type LookState } from "./parts";
 
 type Act =
   | { phase: "idle" }
@@ -73,54 +73,56 @@ export function CardPanel({
       <p className="lede">
         An NFT only a card found Real can have. It can&apos;t be sold or moved, and the contract burns it if the verdict is ever corrected.
       </p>
-      {!card && <p className="notice">Pick a card on the left first.</p>}
-      {card && look.phase === "checking" && (
-        <div className="strip" role="status">
-          Checking NEAR…
-        </div>
+      {!card && (
+        <Note>
+          <p>Pick a card on the left first.</p>
+        </Note>
       )}
-      {card && (look.phase === "error" || held === "unknown") && (
-        <div className="notice" role="alert">
-          <p>{look.phase === "error" ? look.message : `Couldn't read the card contract, ${cardContractId}. Try again in a moment.`}</p>
-          <button type="button" className="btn-secondary" onClick={onRetry}>
-            Try again
-          </button>
-        </div>
-      )}
-      {card && look.phase === "done" && held !== "unknown" && (
-        <>
-          {held ? (
+      {card && (
+        <Frame title="Verified card" aside={<span className="id">{cardContractId}</span>}>
+          {look.phase === "checking" && <Busy>Reading from NEAR…</Busy>}
+          {(look.phase === "error" || held === "unknown") && (
+            <Note role="alert">
+              <p>{look.phase === "error" ? look.message : `Couldn't read the card contract, ${cardContractId}. Try again in a moment.`}</p>
+              <button type="button" className="btn-secondary" onClick={onRetry}>
+                Try again
+              </button>
+            </Note>
+          )}
+          {look.phase === "done" && held && held !== "unknown" && (
             <>
-              <VerdictBar tone="Real" keyText="NFT" word="Held" />
-              <p className="verdict-line">
-                Held by <strong className="account">{held.holder}</strong> since {formatDay(held.mintedAtMs)}.
-              </p>
-              <p className="links">
-                <a href={explorerAccountUrl(cardContractId)} target="_blank" rel="noreferrer">
-                  See the card contract on the NEAR explorer <ExternalIcon />
-                </a>
-                <span className="muted">From check {held.checkId}</span>
-              </p>
+              <Finding tone="Real" word="Held" icon={<SealIcon />}>
+                Held by <span className="account">{held.holder}</span> since {formatDay(held.mintedAtMs)}.
+              </Finding>
+              <dl className="facts">
+                <Fact label="From check" mono>
+                  {held.checkId}
+                </Fact>
+                <Fact label="Contract">
+                  <a href={explorerAccountUrl(cardContractId)} target="_blank" rel="noreferrer">
+                    {cardContractId} <ExternalIcon />
+                  </a>
+                </Fact>
+              </dl>
               {verdict !== "Real" && (
-                <p className="warn">
-                  The registry now says {verdict ?? "nothing"} for this card, so it shouldn&apos;t have a verified card any more. Ask for a recheck
-                  and the contract burns it.
-                </p>
+                <Note tone="Unclear" icon={<AlertIcon />}>
+                  <p>
+                    The registry now says {verdict ?? "nothing"} for this card, so it shouldn&apos;t have a verified card any more. Ask for a recheck
+                    and the contract burns it.
+                  </p>
+                </Note>
               )}
             </>
-          ) : (
-            <>
-              <VerdictBar tone="none" keyText="NFT" word="None" />
-              <p className="verdict-line">
-                {verdict === "Real"
-                  ? "The registry says this card is Real, so it can have one."
-                  : verdict
-                    ? `The registry says ${verdict}. The contract will refuse to mint this one.`
-                    : "Tally hasn't checked this card. The contract will refuse to mint this one."}
-              </p>
-            </>
           )}
-
+          {look.phase === "done" && held === null && (
+            <Finding tone="none" word="None" icon={<SealIcon />}>
+              {verdict === "Real"
+                ? "The registry says this card is Real, so it can have one."
+                : verdict
+                  ? `The registry says ${verdict}. The contract will refuse to mint this one.`
+                  : "Tally hasn't checked this card. The contract will refuse to mint this one."}
+            </Finding>
+          )}
           {act.phase === "minted" && <Outcome txHash={act.txHash}>Minted to {act.holder}. The contract asked the registry first.</Outcome>}
           {act.phase === "rechecked" && (
             <Outcome txHash={act.txHash} gone={!act.stands}>
@@ -130,12 +132,14 @@ export function CardPanel({
             </Outcome>
           )}
           {act.phase === "refused" && (
-            <div className="notice refusal" role="alert">
-              <p className="notice-head">The contract refused</p>
+            <Note tone="Fake" head="The contract refused" role="alert">
               <p>“{act.message}”</p>
-            </div>
+            </Note>
           )}
-
+        </Frame>
+      )}
+      {card && look.phase === "done" && held !== "unknown" && (
+        <>
           <div className="card-act">
             {canMint ? (
               <form
@@ -189,11 +193,11 @@ export function CardPanel({
 
 function Outcome({ txHash, gone, children }: { txHash: string; gone?: boolean; children: React.ReactNode }) {
   return (
-    <p className="outcome" data-gone={gone || undefined}>
-      <span>{children}</span>
+    <Note tone={gone ? "Fake" : "Real"} role="status">
+      <p>{children}</p>
       <a href={explorerTxUrl(txHash)} target="_blank" rel="noreferrer">
-        See the transaction <ExternalIcon />
+        View the transaction <ExternalIcon />
       </a>
-    </p>
+    </Note>
   );
 }

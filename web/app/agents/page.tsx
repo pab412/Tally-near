@@ -3,7 +3,7 @@ import { DEMO_PATH } from "@/lib/fingerprint";
 import { CONTRACT_ID, DEMO_RECORD_FP, RPC_URL, viewRequest } from "@/lib/near";
 import { DocPage, Onward, PageHead } from "../doc-parts";
 import { LiveAnswer } from "../live";
-import { Status } from "../parts";
+import { Frame, LiveTag, Status } from "../parts";
 
 export const metadata: Metadata = {
   title: "For AI agents",
@@ -32,13 +32,15 @@ export default function ForAgents() {
             <p>The answer comes back as bytes of JSON. Nothing comes back for a card Tally has never checked.</p>
             <p>This costs nothing and needs no account. It is the same call this site makes.</p>
           </div>
-          <div className="exhibit">
-            <p className="label">The call</p>
-            <pre className="code">
-              <code>{`curl -s ${RPC_URL} \\\n  -H 'content-type: application/json' \\\n  -d '${REQUEST}'`}</code>
-            </pre>
-            <p className="label">What NEAR answers, read just now</p>
-            <LiveAnswer fp={DEMO_RECORD_FP} contractId={CONTRACT_ID} />
+          <div className="stack">
+            <Frame title="The call">
+              <pre className="code">
+                <code>{`curl -s ${RPC_URL} \\\n  -H 'content-type: application/json' \\\n  -d '${REQUEST}'`}</code>
+              </pre>
+            </Frame>
+            <Frame title="What NEAR answers" aside={<LiveTag>Read just now</LiveTag>}>
+              <LiveAnswer fp={DEMO_RECORD_FP} contractId={CONTRACT_ID} />
+            </Frame>
           </div>
         </div>
       </section>

@@ -141,6 +141,15 @@ export async function liveCounts(opts: NearOptions & { cardContractId?: string }
   return { cards, verified: verified === null ? null : Number(verified) };
 }
 
+/** A fingerprint's first and last eight characters, for a table row: the whole one is shown where there's room. */
+export const shortFingerprint = (fp: string) => `${fp.slice(0, 8)}…${fp.slice(-8)}`;
+
+/** What a check found, as one plain sentence. */
+export function verdictSentence(proof: Proof, timeZone?: string): string {
+  const found = proof.verdict === "Unclear" ? "couldn't tell whether it's real" : `found it ${proof.verdict.toLowerCase()}`;
+  return `Tally checked this card on ${formatDay(proof.recorded_at_ms, timeZone)} and ${found}.`;
+}
+
 /** "10 Nov 2026" in the visitor's time zone (or the one given, for tests). */
 export function formatDay(ms: number, timeZone?: string): string {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone }).format(ms);

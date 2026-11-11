@@ -4,9 +4,9 @@ import Link from "next/link";
 import { recordPath } from "@/lib/fingerprint";
 import { CONTRACT_ID, DEMO_RECORD_FP } from "@/lib/near";
 import { sampleFingerprints } from "@/lib/sample";
-import { DocPage, Exhibit, Onward, PageHead, Step } from "../doc-parts";
+import { DocPage, Onward, PageHead, Step } from "../doc-parts";
 import { LiveRecord } from "../live";
-import { Fingerprint } from "../parts";
+import { ExampleTag, Fingerprint, Frame, History, LiveTag } from "../parts";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -17,6 +17,12 @@ export const metadata: Metadata = {
 // site is built: the file as it is, and the same file with one byte changed.
 const SAMPLE = "sample-card-b.png";
 const { fingerprint: SAMPLE_FP, oneByteChanged: NUDGED_FP } = sampleFingerprints(SAMPLE);
+
+// A made-up history for step 2: a verdict, then the correction added on top of it.
+const APPEAL = [
+  { verdict: "Fake", check_id: "k3x9q2", recorded_at_ms: Date.UTC(2026, 10, 3, 14, 20) },
+  { verdict: "Real", check_id: "k3x9q2-appeal", recorded_at_ms: Date.UTC(2026, 10, 6, 9, 5) },
+] as const;
 
 export default function HowItWorks() {
   return (
@@ -30,9 +36,11 @@ export default function HowItWorks() {
         n={1}
         title="A card becomes a fingerprint"
         visual={
-          <Exhibit example>
-            <div className="bay bay-still">
-              <Image src={`/samples/${SAMPLE}`} alt="A made-up PnL card showing a 38.21% gain" width={1600} height={900} sizes="(max-width: 940px) 92vw, 620px" priority />
+          <Frame title="From picture to fingerprint" aside={<ExampleTag />}>
+            <div>
+              <div className="bay bay-still">
+                <Image src={`/samples/${SAMPLE}`} alt="A made-up PnL card showing a 38.21% gain" width={1600} height={900} sizes="(max-width: 940px) 92vw, 620px" priority />
+              </div>
             </div>
             <div className="fingerprint">
               <p className="label">This card&apos;s fingerprint</p>
@@ -42,7 +50,7 @@ export default function HowItWorks() {
               <p className="label">The same file with one byte changed</p>
               <Fingerprint fp={NUDGED_FP} />
             </div>
-          </Exhibit>
+          </Frame>
         }
       >
         <p>Your browser turns the picture into a 64-character code. The same picture always gives the same code.</p>
@@ -54,26 +62,10 @@ export default function HowItWorks() {
         n={2}
         title="Tally's verdict is written on NEAR"
         visual={
-          <Exhibit example>
-            <div className="history">
-              <p className="label">A card&apos;s history, oldest first</p>
-              <ol>
-                <li>
-                  <span className="verdict-dot" data-verdict="Fake" aria-hidden />
-                  <span className="history-verdict">Fake</span>
-                  <span className="history-id">k3x9q2</span>
-                  <time>3 Nov 2026, 14:20</time>
-                </li>
-                <li data-latest>
-                  <span className="verdict-dot" data-verdict="Real" aria-hidden />
-                  <span className="history-verdict">Real</span>
-                  <span className="history-id">k3x9q2-appeal</span>
-                  <time>6 Nov 2026, 09:05</time>
-                </li>
-              </ol>
-            </div>
-            <p className="exhibit-note">The trader appealed and won. The first verdict is still there for everyone to see.</p>
-          </Exhibit>
+          <Frame title="One card's history, oldest first" aside={<ExampleTag />}>
+            <History entries={[...APPEAL]} timeZone="UTC" />
+            <p>The trader appealed and won. The first verdict is still there for everyone to see.</p>
+          </Frame>
         }
       >
         <p>When Tally finishes checking a card, it writes the fingerprint and the verdict to a contract on NEAR: Real, Unclear or Fake. NEAR adds the time.</p>
@@ -85,13 +77,14 @@ export default function HowItWorks() {
         n={3}
         title="Anyone can check it"
         visual={
-          <Exhibit>
-            <p className="label">A real record, read from NEAR just now</p>
+          <Frame title="Proof record" aside={<LiveTag>Read from NEAR just now</LiveTag>}>
             <LiveRecord fp={DEMO_RECORD_FP} contractId={CONTRACT_ID} />
-            <p className="links">
-              <Link href={recordPath(DEMO_RECORD_FP)}>Open this record in the demo</Link>
+            <p className="frame-foot">
+              <Link className="btn-secondary" href={recordPath(DEMO_RECORD_FP)}>
+                Open this record in the demo
+              </Link>
             </p>
-          </Exhibit>
+          </Frame>
         }
       >
         <p>Drop a card on the demo page, or open the link from a Tally card&apos;s QR code. The answer comes straight from NEAR.</p>

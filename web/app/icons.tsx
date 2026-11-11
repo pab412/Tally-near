@@ -37,3 +37,42 @@ export const SealIcon = () => (
     <path d="m7.2 9.8 2 2 3.6-3.8" />
   </svg>
 );
+
+// The marks for what a check found, and for the short messages inside a panel.
+
+export const CheckIcon = () => (
+  <svg {...base}>
+    <path d="m4.5 10.5 3.5 3.5 7.5-8" />
+  </svg>
+);
+
+export const CrossIcon = () => (
+  <svg {...base}>
+    <path d="m5.5 5.5 9 9M14.5 5.5l-9 9" />
+  </svg>
+);
+
+export const QuestionIcon = () => (
+  <svg {...base}>
+    <path d="M7.4 7.6a2.6 2.6 0 1 1 4 2.2c-.8.5-1.4 1.1-1.4 2.1M10 15.1v.1" />
+  </svg>
+);
+
+export const MinusIcon = () => (
+  <svg {...base}>
+    <path d="M5 10h10" />
+  </svg>
+);
+
+export const InfoIcon = () => (
+  <svg {...base}>
+    <circle cx="10" cy="10" r="7.25" />
+    <path d="M10 9.3v4.2M10 6.5v.1" />
+  </svg>
+);
+
+export const AlertIcon = () => (
+  <svg {...base}>
+    <path d="M10 3.3 17.4 16H2.6zM10 8.2v3.5M10 14v.1" />
+  </svg>
+);

@@ -1,9 +1,20 @@
-// What the page's panels share: the picked card, the answer from NEAR, the verdict bar and the "switched off" notice.
+// What the site's pages share: the header and foot, the framed panel, how a verdict and a record are shown, and the
+// short messages inside a panel.
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { explorerAccountUrl, type Lookup, type Verdict, type VerifiedCard } from "@/lib/near";
-import { ExternalIcon, LockIcon } from "./icons";
+import {
+  explorerAccountUrl,
+  explorerTxUrl,
+  formatMoment,
+  shortFingerprint,
+  type Lookup,
+  type Proof,
+  type ProofRecord,
+  type Verdict,
+  type VerifiedCard,
+} from "@/lib/near";
+import { CheckIcon, CrossIcon, ExternalIcon, InfoIcon, LockIcon, MinusIcon, QuestionIcon } from "./icons";
 
 /** `preview` is null for a card opened from a link: there's a fingerprint, but no picture on this device. */
 export type Card = { name: string; fp: string; preview: string | null; sample: boolean };
@@ -116,28 +127,148 @@ export function Contracts({ contractId, cardContractId, children }: { contractId
   );
 }
 
-/** The one loud thing on the page: a small key block and one big word, coloured by verdict. */
-export function VerdictBar({ tone, keyText, word }: { tone: Verdict | "none"; keyText: string; word: string }) {
+/** A verdict, or "none" where there isn't one. It picks the colour and the mark. */
+export type Tone = Verdict | "none";
+
+const MARK = { Real: CheckIcon, Fake: CrossIcon, Unclear: QuestionIcon, none: MinusIcon };
+
+/** A framed block of the product: a title bar saying what it is and where it's from, then its sections. */
+export function Frame({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
   return (
-    <div className="verdict-bar" data-verdict={tone}>
-      <span className="verdict-key">{keyText}</span>
-      <span className="verdict-word">{word}</span>
+    <div className="frame">
+      <div className="frame-head">
+        <p>{title}</p>
+        {aside}
+      </div>
+      {children}
     </div>
+  );
+}
+
+/** In a frame's title bar: what's inside is made up. */
+export const ExampleTag = () => <span className="tag">Example</span>;
+
+/** In a frame's title bar: what's inside was read from NEAR while the page was open. */
+export function LiveTag({ children }: { children: ReactNode }) {
+  return (
+    <span className="live">
+      <span className="dot" aria-hidden /> {children}
+    </span>
+  );
+}
+
+/** What was found, at a glance: a mark in the verdict's colour, one word, and a sentence saying what it means. */
+export function Finding({ tone, word, icon, children }: { tone: Tone; word: string; icon?: ReactNode; children?: ReactNode }) {
+  const Mark = MARK[tone];
+  return (
+    <div className="finding" data-verdict={tone}>
+      <span className="finding-mark">{icon ?? <Mark />}</span>
+      <p className="finding-word">{word}</p>
+      {children && <p className="finding-sub">{children}</p>}
+    </div>
+  );
+}
+
+/** One row of a facts table. `mono` is for what comes off the chain. */
+export function Fact({ label, mono, title, children }: { label: string; mono?: boolean; title?: string; children: ReactNode }) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd className={mono ? "id" : undefined} title={title}>
+        {children}
+      </dd>
+    </div>
+  );
+}
+
+/** What NEAR holds for a card, as a table. Rows passed in are added at the end. */
+export function RecordFacts({ record, contractId, txHash, children }: { record: ProofRecord; contractId: string; txHash?: string; children?: ReactNode }) {
+  const { latest } = record;
+  return (
+    <dl className="facts">
+      <Fact label="Fingerprint" mono title={record.fingerprint}>
+        {shortFingerprint(record.fingerprint)}
+      </Fact>
+      <Fact label="Recorded">
+        <time dateTime={new Date(latest.recorded_at_ms).toISOString()}>{formatMoment(latest.recorded_at_ms)}</time>{" "}
+        <span className="muted">by NEAR&apos;s clock</span>
+      </Fact>
+      <Fact label="Check ID" mono>
+        {latest.check_id}
+      </Fact>
+      <Fact label={txHash ? "Transaction" : "Contract"}>
+        <a href={txHash ? explorerTxUrl(txHash) : explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
+          {txHash ? "View on the NEAR explorer" : contractId} <ExternalIcon />
+        </a>
+      </Fact>
+      {children}
+    </dl>
+  );
+}
+
+/** Every verdict a card has had, oldest first. The last one is the one that stands. */
+export function History({ entries, timeZone }: { entries: Proof[]; timeZone?: string }) {
+  return (
+    <ol className="history">
+      {entries.map((p, i) => {
+        const Mark = MARK[p.verdict];
+        return (
+          <li key={i} data-verdict={p.verdict} data-latest={i === entries.length - 1 || undefined}>
+            <Mark />
+            <span>{p.verdict}</span>
+            <span className="id">{p.check_id}</span>
+            <time dateTime={new Date(p.recorded_at_ms).toISOString()}>{formatMoment(p.recorded_at_ms, timeZone)}</time>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** A short message inside a panel: a mark, the words, and any action. A tone colours it; without one it's plain. */
+export function Note({
+  tone,
+  icon,
+  head,
+  role,
+  children,
+}: {
+  tone?: Verdict;
+  icon?: ReactNode;
+  head?: string;
+  role?: "alert" | "status";
+  children?: ReactNode;
+}) {
+  const Mark = tone ? MARK[tone] : InfoIcon;
+  return (
+    <div className="note" data-verdict={tone} role={role}>
+      {icon ?? <Mark />}
+      <div>
+        {head && <p className="note-head">{head}</p>}
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Shown while NEAR is being asked. */
+export function Busy({ children }: { children: ReactNode }) {
+  return (
+    <p className="busy" role="status">
+      {children}
+    </p>
   );
 }
 
 /** Shown in place of a form when this copy of the page has no key for that kind of write. */
 export function SwitchedOff({ head, children }: { head: string; children: ReactNode }) {
   return (
-    <div className="notice">
-      <p className="notice-head">
-        <LockIcon /> {head}
-      </p>
+    <Note icon={<LockIcon />} head={head}>
       <p>{children}</p>
       <a href={README} target="_blank" rel="noreferrer">
         Try it yourself <ExternalIcon />
       </a>
-    </div>
+    </Note>
   );
 }
 

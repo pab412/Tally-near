@@ -4,10 +4,10 @@
 // verdict is whatever the contracts answer when the page is open, and says so when they can't be reached.
 
 import { useEffect, useState } from "react";
-import { formatMoment, liveCounts, lookup, viewCall, type Lookup, type ProofRecord } from "@/lib/near";
-import { VerdictBar } from "./parts";
+import { liveCounts, lookup, verdictSentence, viewCall, type Lookup, type ProofRecord } from "@/lib/near";
+import { Busy, Finding, Note, RecordFacts } from "./parts";
 
-/** A real record's verdict, read from the proof registry. */
+/** A real record, read from the proof registry: the sections of a frame. */
 export function LiveRecord({ fp, contractId }: { fp: string; contractId: string }) {
   const [state, setState] = useState<Lookup | "asking" | "unreachable">("asking");
   useEffect(() => {
@@ -21,19 +21,26 @@ export function LiveRecord({ fp, contractId }: { fp: string; contractId: string 
     };
   }, [fp, contractId]);
 
-  if (state === "asking") return <div className="strip">Asking NEAR…</div>;
-  if (state === "unreachable") return <div className="strip">NEAR couldn&apos;t be reached just now. The demo page will try again.</div>;
-  if (!state.found) return <VerdictBar tone="none" keyText="NOT CHECKED" word="No record" />;
+  if (state === "asking") return <Busy>Reading from NEAR…</Busy>;
+  if (state === "unreachable")
+    return (
+      <Note role="status">
+        <p>NEAR couldn&apos;t be reached just now. The demo page will try again.</p>
+      </Note>
+    );
+  if (!state.found)
+    return (
+      <Finding tone="none" word="No record">
+        Tally hasn&apos;t checked this card yet.
+      </Finding>
+    );
   const { latest } = state.record;
   return (
     <>
-      <VerdictBar tone={latest.verdict} keyText="CHECKED" word={latest.verdict} />
-      <dl className="facts">
-        <dt>Recorded</dt>
-        <dd>{formatMoment(latest.recorded_at_ms)}, by NEAR&apos;s clock</dd>
-        <dt>Check id</dt>
-        <dd className="id">{latest.check_id}</dd>
-      </dl>
+      <Finding tone={latest.verdict} word={latest.verdict}>
+        {verdictSentence(latest)}
+      </Finding>
+      <RecordFacts record={state.record} contractId={contractId} />
     </>
   );
 }

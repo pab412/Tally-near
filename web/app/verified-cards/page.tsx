@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { REFUSALS } from "@/lib/card-rules";
 import { DEMO_PATH } from "@/lib/fingerprint";
 import Link from "next/link";
-import { DocPage, Exhibit, Onward, PageHead } from "../doc-parts";
-import { Status, VerdictBar } from "../parts";
+import { SealIcon } from "../icons";
+import { DocPage, Onward, PageHead } from "../doc-parts";
+import { ExampleTag, Finding, Frame, Status } from "../parts";
 
 export const metadata: Metadata = {
   title: "Verified cards",
@@ -32,10 +33,12 @@ export default function VerifiedCards() {
               <strong>It burns if the verdict changes.</strong> Anyone can ask for a recheck, and the contract removes a card that&apos;s no longer Real.
             </li>
           </ul>
-          <Exhibit example>
-            <VerdictBar tone="Real" keyText="NFT" word="Held" />
-            <p className="exhibit-note">What the demo shows for a card that has its verified card.</p>
-          </Exhibit>
+          <Frame title="Verified card" aside={<ExampleTag />}>
+            <Finding tone="Real" word="Held" icon={<SealIcon />}>
+              Held by <span className="account">trader.testnet</span> since 6 Nov 2026.
+            </Finding>
+            <p>What the demo shows for a card that has its verified card.</p>
+          </Frame>
         </div>
       </section>
 

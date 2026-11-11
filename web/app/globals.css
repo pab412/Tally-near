@@ -1,14 +1,15 @@
-/* Tally on NEAR: the demo page. It wears tallypnl.com's own look (the owner, 2026-11-10: "sleek and sexy. Keeping
-   the same look as tally. But fix fonts, bubblyness, Pnl cards"): Geist on near black with the faint diagonal streaks,
-   hairline edges and the frosted pink glass button. Nothing is rounded past 2px. Geist Mono is kept for what comes off
-   the chain (fingerprints, account and check ids). The one loud thing is the verdict plate, so the answer reads at a
-   glance and on video; the card bay with its corner ticks and scan line is the quiet second. */
+/* Tally on NEAR. It wears tallypnl.com's own look (the owner, 2026-11-10: "sleek and sexy. Keeping the same look as
+   tally. But fix fonts, bubblyness, Pnl cards"): Geist on near black with the faint diagonal streaks, hairline edges and
+   the frosted pink glass button. Nothing is rounded past 2px. Geist Mono is kept for what comes off the chain
+   (fingerprints, account and check ids). Anything the product shows sits in a frame: a title bar, then sections split
+   by hairlines, the way a record reads in a back-office tool (the owner again: "production grade. What you would see
+   at corporate jobs"). Colour is kept for meaning: green real, amber unclear, red fake; pink is the brand's alone. */
 :root{--f-ui:var(--font-sans),'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--f-mono:var(--font-mono),ui-monospace,'SF Mono',Menlo,Consolas,monospace;
  --page:#08090c;--surface:#0d0e12;--surface-raised:#14151a;--border:rgba(239,233,223,.09);--border-strong:rgba(239,233,223,.17);
  --glass:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.015) 65%),linear-gradient(100deg,rgba(255,36,139,.15),rgba(196,72,190,.1));
  --glass-hover:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.025) 65%),linear-gradient(100deg,rgba(255,36,139,.22),rgba(196,72,190,.15));
  --glass-edge:rgba(255,150,205,.32) rgba(205,170,255,.24) rgba(205,170,255,.18) rgba(255,150,205,.28);
- --text:#f4f3f5;--text-secondary:#c6c2cb;--text-muted:#9c9ca9;--brand:#ff248b;--green:#62d5a2;--red:#ff7e8a;--amber:#ffc65c;
+ --text:#f4f3f5;--text-secondary:#c6c2cb;--text-muted:#9c9ca9;--brand:#ff248b;--green:#62d5a2;--red:#ff6470;--amber:#ffc65c;
  --ring:0 0 0 2px var(--page),0 0 0 4px var(--brand);--r:2px;--gut:16px;color-scheme:dark}
 @media(min-width:640px){:root{--gut:24px}}@media(min-width:1024px){:root{--gut:40px}}
 *{box-sizing:border-box}
@@ -22,6 +23,8 @@ button,input{font:inherit;color:inherit}
 .muted{color:var(--text-muted)}
 svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 ::selection{background:rgba(255,36,139,.35)}
+/* a verdict's colour, wherever one is shown */
+[data-verdict]{--tone:var(--text-muted)}[data-verdict=Real]{--tone:var(--green)}[data-verdict=Unclear]{--tone:var(--amber)}[data-verdict=Fake]{--tone:var(--red)}
 
 /* the site's background: near black with faint diagonal pink and violet streaks */
 .bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--page)}
@@ -103,50 +106,70 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 .panel{min-width:0}
 .panel-title{margin:0 0 28px;font:600 clamp(2.25rem,4.6vw,3.5rem)/1 var(--f-ui);letter-spacing:-.045em;text-wrap:balance}
 .lede{margin:-8px 0 28px;max-width:46ch;color:var(--text-secondary);font-size:1.0625rem;line-height:1.5}
-.strip{display:flex;align-items:center;min-height:112px;padding:0 24px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text-muted)}
-.notice{margin:0;padding:20px 22px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface)}
-.notice p{margin:0 0 12px}.notice-head{display:flex;align-items:center;gap:8px;font-weight:500}
-
-/* the verdict plate: the one loud thing on the page */
-.verdict-bar{display:flex;align-items:stretch;min-height:112px;border:1px solid var(--border-strong);border-radius:var(--r);overflow:hidden;background:var(--surface);animation:land .32s cubic-bezier(.2,.9,.3,1)}
-@keyframes land{from{opacity:0;transform:translateY(8px) scale(.985)}}
-.verdict-key{display:flex;align-items:center;justify-content:center;width:44px;background:#f4f3f5;color:#08090c;font:600 .6875rem/1 var(--f-ui);letter-spacing:.16em;writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
-.verdict-word{flex:1;display:flex;align-items:center;padding:0 28px;font:700 clamp(2.75rem,7.4vw,5.25rem)/1 var(--f-ui);letter-spacing:-.045em;text-transform:uppercase}
-.verdict-bar[data-verdict=Fake] .verdict-word{background:var(--brand);color:#08090c}
-.verdict-bar[data-verdict=Real] .verdict-word{background:var(--green);color:#08090c}
-.verdict-bar[data-verdict=Unclear] .verdict-word{background:var(--amber);color:#08090c}
-.verdict-bar[data-verdict=none] .verdict-word{color:var(--text-muted);font-weight:600;font-size:clamp(1.75rem,4.4vw,2.75rem);letter-spacing:-.035em}
-.verdict-line{margin:24px 0 0;font-size:1.1875rem;line-height:1.4;letter-spacing:-.01em}
-.verdict-line+.muted{margin:8px 0 0;max-width:52ch}
-.links{display:flex;flex-wrap:wrap;align-items:center;gap:10px 22px;margin:20px 0 0}
-
-/* what NEAR holds for the card, as a short table */
-.facts{display:grid;grid-template-columns:max-content minmax(0,1fr);margin:24px 0 0;border-top:1px solid var(--border)}
-.facts dt,.facts dd{margin:0;padding:11px 0;border-bottom:1px solid var(--border);font-size:.9375rem}
-.facts dt{padding-right:32px;color:var(--text-muted)}
-.facts dd{font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.facts .id{font:400 .8125rem/1.6 var(--f-mono)}
-
-.history{margin-top:36px}
-.history ol{margin:0;padding:0;list-style:none;border-top:1px solid var(--border)}
-.history li{display:grid;grid-template-columns:auto 5.5rem minmax(0,1fr) auto;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);color:var(--text-secondary);font-size:.9375rem}
-.history li[data-latest]{color:var(--text)}
-.history-id{font:400 .8125rem/1.3 var(--f-mono);color:var(--text-muted);overflow-wrap:anywhere}
-.history time{font-variant-numeric:tabular-nums;color:var(--text-muted);font-size:.875rem}
-.verdict-dot{width:3px;height:16px;background:var(--text-muted)}
-.verdict-dot[data-verdict=Fake]{background:var(--brand)}.verdict-dot[data-verdict=Real]{background:var(--green)}.verdict-dot[data-verdict=Unclear]{background:var(--amber)}
-@media(max-width:520px){.history li{grid-template-columns:auto minmax(0,1fr)}.history-id,.history time{grid-column:2}}
-
-/* the verified card */
+.id{font:400 .8125rem/1.6 var(--f-mono)}
 .account{font:500 .9375em/1.3 var(--f-mono);overflow-wrap:anywhere}
-.held{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:20px 0 0;padding:13px 16px;border:1px solid var(--border);border-left:2px solid var(--green);border-radius:var(--r);background:var(--surface)}
-.held svg{flex:none;width:18px;height:18px;color:var(--green)}
-.link-btn{min-height:32px;margin-left:auto;padding:0;border:0;background:none;color:var(--text);text-decoration:underline;text-decoration-color:var(--border-strong);text-underline-offset:4px;cursor:pointer}
+
+/* a framed block of the product: a title bar saying what it is and where it's from, then sections split by hairlines */
+.frame{min-width:0;border:1px solid var(--border-strong);border-radius:var(--r);background:rgba(13,14,18,.82);backdrop-filter:blur(6px);box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 32px 56px -40px #000}
+.frame>*{margin:0;padding:20px 22px}
+.frame>*+*{border-top:1px solid var(--border)}
+.frame>p{color:var(--text-muted);font-size:.875rem;line-height:1.5}
+.frame-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px 16px;min-height:44px;padding-block:8px;background:rgba(255,255,255,.02);color:var(--text-muted);font-size:.8125rem;line-height:1.4}
+.frame-head p{margin:0;color:var(--text-secondary);font-weight:500;letter-spacing:-.005em}
+.frame-head .id{font-size:.75rem;overflow-wrap:anywhere}
+.tag{padding:1px 7px;border:1px solid var(--border-strong);border-radius:var(--r);font-size:.75rem}
+.live{display:inline-flex;align-items:center;gap:9px;white-space:nowrap}
+.frame>.frame-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:14px;color:var(--text);font-size:.875rem}
+.frame>.code{padding:18px 22px;border:0;border-radius:0;background:none}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+
+/* what was found: a mark in the verdict's colour, one word, and a sentence */
+.finding{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;column-gap:16px;animation:land .3s cubic-bezier(.2,.9,.3,1)}
+@keyframes land{from{opacity:0;transform:translateY(6px)}}
+.finding-mark{grid-row:1/span 2;display:grid;place-items:center;width:44px;height:44px;border:1px solid color-mix(in srgb,var(--tone) 42%,transparent);border-radius:var(--r);background:color-mix(in srgb,var(--tone) 13%,transparent);color:var(--tone)}
+.finding-mark svg{width:22px;height:22px}
+.finding-word{grid-column:2;align-self:end;margin:0;color:var(--text);font:600 1.625rem/1.2 var(--f-ui);letter-spacing:-.03em}
+.finding-word:last-child{grid-row:1/span 2;align-self:center}
+.finding-sub{grid-column:2;align-self:start;margin:2px 0 0;color:var(--text-secondary);font-size:.9375rem;line-height:1.45}
+.panel .finding{column-gap:18px}.panel .finding-mark{width:52px;height:52px}.panel .finding-mark svg{width:26px;height:26px}.panel .finding-word{font-size:2rem}.panel .finding-sub{font-size:1rem}
+
+/* what NEAR holds for the card, as a table */
+.facts{margin:0}
+.frame>.facts{padding-block:6px}
+.facts>div{display:grid;grid-template-columns:8.5rem minmax(0,1fr);align-items:baseline;padding:11px 0;border-bottom:1px solid var(--border);font-size:.9375rem;line-height:1.5}
+.facts>div:last-child{border-bottom:0}
+.facts dt{color:var(--text-muted)}
+.facts dd{margin:0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.facts .id{font-size:.875rem;line-height:inherit}
+.fact-act{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+.link-btn{padding:0;border:0;background:none;color:var(--text);text-decoration:underline;text-decoration-color:var(--border-strong);text-underline-offset:4px;cursor:pointer}
 .link-btn:hover{color:var(--brand)}
-.warn{margin:20px 0 0;padding:13px 16px;border-left:2px solid var(--amber);background:var(--surface);color:var(--text-secondary)}
-.outcome{display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;margin:24px 0 0;padding:14px 16px;border:1px solid var(--border);border-left:2px solid var(--green);border-radius:var(--r);background:var(--surface);animation:land .32s cubic-bezier(.2,.9,.3,1)}
-.outcome[data-gone]{border-left-color:var(--brand)}
-.refusal{margin-top:24px;border-left:2px solid var(--brand);animation:land .32s cubic-bezier(.2,.9,.3,1)}.refusal p:last-child{margin:0;color:var(--text-secondary)}
+
+/* every verdict a card has had, oldest first */
+.history{margin:0;padding:0;list-style:none}
+.frame>.history{padding:20px 22px}
+.history li{display:grid;grid-template-columns:16px 4.5rem minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);color:var(--text-secondary);font-size:.9375rem}
+.history li:first-child{padding-top:0}.history li:last-child{padding-bottom:0;border-bottom:0}
+.history li>svg{color:var(--tone)}
+.history li[data-latest]{color:var(--text)}
+.history .id{color:var(--text-muted);overflow-wrap:anywhere}
+.history time{font-variant-numeric:tabular-nums;color:var(--text-muted);font-size:.875rem}
+@media(max-width:520px){.facts>div{grid-template-columns:7rem minmax(0,1fr)}.history li{grid-template-columns:16px minmax(0,1fr)}.history .id,.history time{grid-column:2}}
+
+/* a short message: a mark, the words, any action. A verdict colours it. */
+.note{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:12px;margin:0;padding:14px 16px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text-secondary);font-size:.9375rem;line-height:1.5}
+.note[data-verdict]{border-color:color-mix(in srgb,var(--tone) 30%,transparent);background:color-mix(in srgb,var(--tone) 7%,var(--surface));animation:land .3s cubic-bezier(.2,.9,.3,1)}
+.note>svg{width:18px;height:18px;margin-top:2px;color:var(--tone,var(--text-muted))}
+.note p{margin:0}.note a{display:inline-block}
+.note p+p,.note p+a,.note p+button{margin-top:8px}
+.note-head{color:var(--text);font-weight:500}
+.frame>.note{padding:16px 22px;border-width:1px 0 0;border-color:var(--border);border-radius:0}
+.frame>.note:not([data-verdict]){background:none}
+
+/* while NEAR is asked */
+.busy{display:flex;align-items:center;gap:12px;min-height:84px;margin:0;color:var(--text-muted)}
+.busy::before{content:"";flex:none;width:14px;height:14px;border:1.5px solid var(--border-strong);border-top-color:var(--text-secondary);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .card-act{margin-top:32px}
 
 /* buttons: the site's frosted pink glass for the main action, a hairline one for the rest */
@@ -166,10 +189,7 @@ a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:v
 .segmented label{position:relative;cursor:pointer}.segmented label+label{border-left:1px solid var(--border-strong)}
 .segmented input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .segmented span{display:flex;align-items:center;justify-content:center;min-height:48px;color:var(--text-muted);font-weight:500;transition:color .15s,background .15s}
-.segmented input:checked+span{background:var(--surface-raised);color:var(--text);box-shadow:inset 0 -2px 0 var(--text-muted)}
-.segmented label[data-verdict=Fake] input:checked+span{box-shadow:inset 0 -2px 0 var(--brand)}
-.segmented label[data-verdict=Real] input:checked+span{box-shadow:inset 0 -2px 0 var(--green)}
-.segmented label[data-verdict=Unclear] input:checked+span{box-shadow:inset 0 -2px 0 var(--amber)}
+.segmented input:checked+span{background:var(--surface-raised);color:var(--text);box-shadow:inset 0 -2px 0 var(--tone)}
 .segmented input:focus-visible+span{box-shadow:var(--ring)}
 .field{display:block}
 .field input{width:100%;min-height:48px;padding:0 14px;border:1px solid var(--border-strong);border-radius:var(--r);background:rgba(8,9,12,.6);transition:border-color .15s}
@@ -197,14 +217,6 @@ a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:v
  mask-image:linear-gradient(90deg,transparent 2%,#000 34%,#000 90%,transparent),linear-gradient(0deg,transparent 3%,#000 22%,#000 90%,transparent);mask-composite:intersect}
 .doc-lede{margin:28px 0 0;max-width:44ch;color:var(--text-secondary);font-size:clamp(1.0625rem,1.5vw,1.25rem);line-height:1.5}
 .doc-cta{display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px;margin:36px 0 0}
-.exhibit{position:relative;display:flex;flex-direction:column;gap:22px;padding:22px;border:1px solid var(--border);border-radius:var(--r);background:rgba(13,14,18,.72);backdrop-filter:blur(6px)}
-.exhibit-tag{position:absolute;z-index:2;top:-1px;right:-1px;padding:4px 9px 3px;background:var(--text);color:var(--page);font:600 .625rem/1.4 var(--f-ui);letter-spacing:.14em;text-transform:uppercase}
-.exhibit .label{margin-bottom:10px}
-.exhibit .history{margin:0}.exhibit .facts,.exhibit .links{margin-top:0}
-.exhibit-note{margin:0;color:var(--text-muted);font-size:.875rem}
-.exhibit .refusal{margin:0;animation:none}
-.exhibit .verdict-bar{min-height:104px}.exhibit .verdict-word{font-size:clamp(2.25rem,5vw,3.5rem)}
-.exhibit .verdict-bar[data-verdict=none] .verdict-word{font-size:clamp(1.5rem,3.4vw,2.125rem)}
 .bay-still{cursor:default}.bay-still:hover{border-color:var(--border);background:var(--surface)}.bay-still:hover::after{--t:rgba(244,243,245,.55)}
 
 .step{padding-top:80px}
@@ -214,8 +226,10 @@ a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:v
 .step:nth-of-type(odd) .step-visual{order:-1}
 .prose{max-width:50ch;color:var(--text-secondary);font-size:1.0625rem;line-height:1.6}
 .prose p{margin:0 0 16px}.prose p:first-child{color:var(--text);font-size:1.1875rem;line-height:1.5;letter-spacing:-.01em}
-.rules{display:flex;flex-direction:column;gap:18px;margin:0;padding:0;list-style:none;color:var(--text-secondary);font-size:1.0625rem;line-height:1.55}
-.rules li{padding-left:18px;border-left:2px solid var(--green)}
+.rules{margin:0;padding:0;list-style:none;color:var(--text-secondary);font-size:1.0625rem;line-height:1.55}
+.rules li{position:relative;padding:0 0 20px 32px}
+.rules li+li{padding-top:20px;border-top:1px solid var(--border)}
+.rules li:last-child{padding-bottom:0}
 .rules strong{display:block;color:var(--text);font-weight:600}
 
 .split{padding-top:88px}
@@ -225,9 +239,10 @@ a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:v
 /* lists of what's included and what isn't: a thin check or a thin cross, no boxes */
 .ticks{margin:0 0 16px;padding:0;list-style:none}
 .ticks li{position:relative;padding:12px 0 12px 30px;border-bottom:1px solid var(--border);color:var(--text-secondary)}
-.ticks li::before{content:"";position:absolute;left:0;top:15px;width:18px;height:18px;background:var(--green);
+.ticks li::before,.rules li::before{content:"";position:absolute;left:0;top:15px;width:18px;height:18px;background:var(--green);
  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 9.5l3.5 3.5 7.5-8'/%3E%3C/svg%3E") center/contain no-repeat;
  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 9.5l3.5 3.5 7.5-8'/%3E%3C/svg%3E") center/contain no-repeat}
+.rules li::before{top:4px}.rules li+li::before{top:24px}
 .ticks-no li::before{background:var(--text-muted);
  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M4.5 4.5l9 9M13.5 4.5l-9 9'/%3E%3C/svg%3E");
  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'%3E%3Cpath d='M4.5 4.5l9 9M13.5 4.5l-9 9'/%3E%3C/svg%3E")}
@@ -238,7 +253,6 @@ a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:v
 .split h2 .status{margin-left:14px}
 /* a request or an answer, as text to copy */
 .code{margin:0;padding:14px 16px;border:1px solid var(--border);border-radius:var(--r);background:rgba(8,9,12,.7);color:var(--text-secondary);font:400 .8125rem/1.6 var(--f-mono);white-space:pre-wrap;overflow-wrap:anywhere}
-.exhibit .code+.label{margin-top:4px}
 /* the front page's three parts: what each is, where it stands, and the page for it */
 .trio{padding:24px 0 0}
 .trio ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 56px;margin:0;padding:0;list-style:none}
@@ -256,7 +270,7 @@ a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:v
 .refusals{margin:24px 0 0;border-top:1px solid var(--border)}
 .refusals div{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:6px 40px;padding:16px 0;border-bottom:1px solid var(--border)}
 .refusals dt{color:var(--text-secondary)}
-.refusals dd{margin:0;padding-left:16px;border-left:2px solid var(--brand);color:var(--text)}
+.refusals dd{margin:0;color:var(--text)}
 .faq{padding-top:40px}
 .faq details:first-child{border-top:1px solid var(--border-strong)}
 .faq details{border-bottom:1px solid var(--border)}

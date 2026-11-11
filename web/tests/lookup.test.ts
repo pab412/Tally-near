@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { formatDay, lookup, LookupError, type Proof, type ProofRecord } from "@/lib/near";
+import { formatDay, lookup, LookupError, shortFingerprint, verdictSentence, type Proof, type ProofRecord } from "@/lib/near";
 
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const AT = Date.UTC(2026, 10, 10, 22, 4); // 10 Nov 2026
@@ -62,6 +62,16 @@ describe("lookup", () => {
 
   it("shows the chain's time as a plain date", () => {
     expect(formatDay(AT, "UTC")).toBe("10 Nov 2026");
+  });
+
+  it("says what a check found in one plain sentence", () => {
+    expect(verdictSentence(fake, "UTC")).toBe("Tally checked this card on 10 Nov 2026 and found it fake.");
+    expect(verdictSentence(real, "UTC")).toBe("Tally checked this card on 10 Nov 2026 and found it real.");
+    expect(verdictSentence({ ...fake, verdict: "Unclear" }, "UTC")).toBe("Tally checked this card on 10 Nov 2026 and couldn't tell whether it's real.");
+  });
+
+  it("shortens a fingerprint to its two ends for a table row", () => {
+    expect(shortFingerprint(FP)).toBe("ba7816bf…f20015ad");
   });
 });
 

@@ -4,21 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { fingerprint, recordPath } from "@/lib/fingerprint";
-import {
-  VERDICTS,
-  LookupError,
-  explorerAccountUrl,
-  explorerTxUrl,
-  formatDay,
-  formatMoment,
-  lookup,
-  verifiedCard,
-  type ProofRecord,
-  type Verdict,
-} from "@/lib/near";
+import { VERDICTS, LookupError, explorerAccountUrl, explorerTxUrl, lookup, verdictSentence, verifiedCard, type ProofRecord, type Verdict } from "@/lib/near";
 import { CardPanel } from "./card-panel";
-import { ExternalIcon, SealIcon, UploadIcon } from "./icons";
-import { Contracts, Fingerprint, SiteHeader, SwitchedOff, VerdictBar, send, type Card, type LookState } from "./parts";
+import { ExternalIcon, UploadIcon } from "./icons";
+import { Busy, Contracts, Fact, Finding, Fingerprint, Frame, History, Note, RecordFacts, SiteHeader, SwitchedOff, send, type Card, type LookState } from "./parts";
 
 const SAMPLES = [
   { file: "sample-card-a.png", label: "Sample A", hint: "Corrected once" },
@@ -268,7 +257,7 @@ export default function TallyDemo({
 function CopyLink({ fp }: { fp: string }) {
   const [copied, setCopied] = useState(false);
   return (
-    <p className="links">
+    <p className="frame-foot">
       <button
         type="button"
         className="btn-secondary"
@@ -302,86 +291,63 @@ function LookupPanel({
     <div aria-live="polite">
       <h1 className="panel-title">Did Tally check this card?</h1>
       {look.phase === "idle" && (
-        <>
-          <p className="lede">
-            Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.{" "}
-            <Link href="/how-it-works">New here? See how it works.</Link>
-          </p>
-          <VerdictBar tone="none" keyText="RESULT" word="No card yet" />
-        </>
+        <p className="lede">
+          Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.{" "}
+          <Link href="/how-it-works">New here? See how it works.</Link>
+        </p>
       )}
-      {look.phase === "checking" && (
-        <div className="strip" role="status">
-          Checking NEAR…
-        </div>
-      )}
-      {look.phase === "error" && (
-        <div className="notice" role="alert">
-          <p>{look.message}</p>
-          <button type="button" className="btn-secondary" onClick={onRetry}>
-            Try again
-          </button>
-        </div>
-      )}
-      {look.phase === "done" && !look.result.found && (
-        <>
-          <VerdictBar tone="none" keyText="NOT CHECKED" word="No record" />
-          <p className="verdict-line">Tally hasn&apos;t checked this card yet.</p>
-          <p className="muted">There is no record for this fingerprint on {contractId}. A copy that differs by a single pixel has a different fingerprint.</p>
-        </>
-      )}
-      {look.phase === "done" && look.result.found && (
-        <>
-          <VerdictBar tone={look.result.record.latest.verdict} keyText="CHECKED" word={look.result.record.latest.verdict} />
-          <p className="verdict-line">
-            Tally checked this card on {formatDay(look.result.record.latest.recorded_at_ms)} and found it {look.result.record.latest.verdict}.
-          </p>
-          <dl className="facts">
-            <dt>Recorded</dt>
-            <dd>
-              <time dateTime={new Date(look.result.record.latest.recorded_at_ms).toISOString()}>
-                {formatMoment(look.result.record.latest.recorded_at_ms)}
-              </time>
-              , by NEAR&apos;s clock
-            </dd>
-            <dt>Check id</dt>
-            <dd className="id">{look.result.record.latest.check_id}</dd>
-            <dt>On NEAR</dt>
-            <dd>
-              <a href={txHash ? explorerTxUrl(txHash) : explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-                {txHash ? "See this record on the explorer" : `See ${contractId} on the explorer`} <ExternalIcon />
-              </a>
-            </dd>
-          </dl>
-          {look.held && look.held !== "unknown" && (
-            <p className="held">
-              <SealIcon />
-              <span>
-                Has a verified card, held by <strong className="account">{look.held.holder}</strong>.
-              </span>
-              <button type="button" className="link-btn" onClick={onShowCard}>
-                See it
-              </button>
-            </p>
-          )}
-          <CopyLink fp={look.result.record.fingerprint} />
-          {look.result.history.length > 1 && (
-            <div className="history">
-              <p className="label">History: {look.result.history.length} entries, oldest first. Nothing is ever removed.</p>
-              <ol>
-                {look.result.history.map((p, i, all) => (
-                  <li key={i} data-latest={i === all.length - 1 || undefined}>
-                    <span className="verdict-dot" data-verdict={p.verdict} aria-hidden />
-                    <span className="history-verdict">{p.verdict}</span>
-                    <span className="history-id">{p.check_id}</span>
-                    <time dateTime={new Date(p.recorded_at_ms).toISOString()}>{formatMoment(p.recorded_at_ms)}</time>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-        </>
-      )}
+      <Frame title="Proof record" aside={<span className="id">{contractId}</span>}>
+        {look.phase === "idle" && (
+          <Finding tone="none" word="No card yet">
+            Pick a card and its record shows here.
+          </Finding>
+        )}
+        {look.phase === "checking" && <Busy>Reading from NEAR…</Busy>}
+        {look.phase === "error" && (
+          <Note role="alert">
+            <p>{look.message}</p>
+            <button type="button" className="btn-secondary" onClick={onRetry}>
+              Try again
+            </button>
+          </Note>
+        )}
+        {look.phase === "done" && !look.result.found && (
+          <>
+            <Finding tone="none" word="No record">
+              Tally hasn&apos;t checked this card yet.
+            </Finding>
+            <p>There is no record for this fingerprint on {contractId}. A copy that differs by a single pixel has a different fingerprint.</p>
+          </>
+        )}
+        {look.phase === "done" && look.result.found && (
+          <>
+            <Finding tone={look.result.record.latest.verdict} word={look.result.record.latest.verdict}>
+              {verdictSentence(look.result.record.latest)}
+            </Finding>
+            <RecordFacts record={look.result.record} contractId={contractId} txHash={txHash}>
+              {look.held && look.held !== "unknown" && (
+                <Fact label="Verified card">
+                  <span className="fact-act">
+                    <span>
+                      Held by <span className="account">{look.held.holder}</span>
+                    </span>
+                    <button type="button" className="link-btn" onClick={onShowCard}>
+                      See it
+                    </button>
+                  </span>
+                </Fact>
+              )}
+            </RecordFacts>
+            {look.result.history.length > 1 && (
+              <div>
+                <p className="label">History: {look.result.history.length} entries, oldest first. Nothing is ever removed.</p>
+                <History entries={look.result.history} />
+              </div>
+            )}
+            <CopyLink fp={look.result.record.fingerprint} />
+          </>
+        )}
+      </Frame>
     </div>
   );
 }
@@ -429,24 +395,27 @@ function RecordPanel({
         Demo only. This writes a <span className="sample-tag">SAMPLE</span> check for the card on the left to NEAR testnet, for good.
       </p>
       {!card ? (
-        <p className="notice">Pick a card on the left first.</p>
+        <Note>
+          <p>Pick a card on the left first.</p>
+        </Note>
       ) : state.phase === "done" ? (
         <div aria-live="polite">
-          <VerdictBar tone={state.record.latest.verdict} keyText="RECORDED" word={state.record.latest.verdict} />
-          <p className="verdict-line">
-            Recorded on NEAR as entry {state.record.entries} for this card, check id {state.record.latest.check_id}.
-          </p>
-          <p className="links">
-            <a href={explorerTxUrl(state.txHash)} target="_blank" rel="noreferrer">
-              See the transaction on the NEAR explorer <ExternalIcon />
-            </a>
-            <button type="button" className="btn-secondary" onClick={onShowLookup}>
-              Look it up
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => setState({ phase: "idle" })}>
-              Record a correction
-            </button>
-          </p>
+          <Frame title="Proof record" aside={<span>Just recorded</span>}>
+            <Finding tone={state.record.latest.verdict} word={state.record.latest.verdict}>
+              Recorded on NEAR as entry {state.record.entries} for this card, check ID {state.record.latest.check_id}.
+            </Finding>
+            <p className="frame-foot">
+              <button type="button" className="btn-secondary" onClick={onShowLookup}>
+                Look it up
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setState({ phase: "idle" })}>
+                Record a correction
+              </button>
+              <a href={explorerTxUrl(state.txHash)} target="_blank" rel="noreferrer">
+                View the transaction <ExternalIcon />
+              </a>
+            </p>
+          </Frame>
         </div>
       ) : (
         <form
