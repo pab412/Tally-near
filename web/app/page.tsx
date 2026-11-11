@@ -76,7 +76,10 @@ export default function Home() {
           <li>
             <Status />
             <h2>AI agents pay to check</h2>
-            <p>Before an AI agent trusts a trader, it pays a small fee to check their card on NEAR. Part of the fee goes into the trader&apos;s badge.</p>
+            <p>
+              Before an AI agent trusts a trader, it pays a small fee to check their card on NEAR. Part of the fee goes into the trader&apos;s badge.
+              People look cards up for free.
+            </p>
             <Link href="/agents">For AI agents</Link>
           </li>
         </ul>

@@ -532,15 +532,24 @@ function BadgeRow({
   );
 }
 
-/** The paid check contract's tab: what a check costs and how many were answered. It keeps no list of them. */
+/** The paid check contract's tab: who pays (agents, never a visitor), what a check costs and how many were answered. */
 function Checks({ terms }: { terms: CheckTerms | null }) {
   if (!terms) return <Note role="status" head="The paid check contract couldn't be read just now." />;
   return (
     <>
+      {/* said first, so nobody reads "paid" as something a visitor owes (the owner, 2026-11-11: "Users might think they have to pay to get something checked") */}
+      <div className="ledger-lead">
+        <b>Looking a card up is free for everyone.</b>
+        No wallet, no account, no fee. A paid check is something only an AI agent (a bot) does: it pays a small fee out of credit its owner loaded, and
+        half of that goes to the trader.
+      </div>
       <div className="ledger-pay">
-        <TermsFacts terms={terms} />
         <div>
-          <p>Reading a record is free. A paid check leaves a public record on NEAR that this agent checked this card before it acted.</p>
+          <p className="label">What an AI agent pays</p>
+          <TermsFacts terms={terms} />
+        </div>
+        <div>
+          <p>Why would a bot pay when reading is free? For the receipt: a public record on NEAR that it checked this card before it acted.</p>
           <p>No outside agent pays yet. This is testnet, so every check counted here is a test run: start the demo agent and the count goes up.</p>
         </div>
       </div>
