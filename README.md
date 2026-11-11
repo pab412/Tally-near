@@ -21,7 +21,6 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 | Verified card contract (NFT) | `contracts/card` | 18 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). |
 | Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
 | Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 32 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
-
 | Paid check for AI agents | not started | Planned: an agent pays a small fee to check a card, and part of it goes to the trader holding that card's verified card. Nothing of it is in the repository yet; the site marks it "In build". |
 
 Each part's state is also shown on the site next to it (Live on testnet, Tested and going live, In build).
