@@ -83,7 +83,10 @@ mod tests {
     #[test]
     fn what_counts_as_a_fingerprint() {
         assert!(is_fingerprint(FP));
-        assert!(!is_fingerprint(&FP.to_uppercase()), "lower case only, so one card has one key");
+        assert!(
+            !is_fingerprint(&FP.to_uppercase()),
+            "lower case only, so one card has one key"
+        );
         assert!(!is_fingerprint(&FP[..63]));
         assert!(!is_fingerprint(&format!("{}g", &FP[..63])));
         assert!(!is_fingerprint("@some_trader"));
@@ -100,9 +103,18 @@ mod tests {
 
     #[test]
     fn a_record_reads_the_same_json_the_registry_answers_with() {
-        let json = format!(r#"{{"fingerprint":"{FP}","latest":{{"verdict":"Real","check_id":"k3x9q2","recorded_at_ms":1000}},"entries":2}}"#);
+        let json = format!(
+            r#"{{"fingerprint":"{FP}","latest":{{"verdict":"Real","check_id":"k3x9q2","recorded_at_ms":1000}},"entries":2}}"#
+        );
         let record: Record = near_sdk::serde_json::from_str(&json).unwrap();
-        assert_eq!(record.latest, Proof { verdict: Verdict::Real, check_id: "k3x9q2".into(), recorded_at_ms: 1000 });
+        assert_eq!(
+            record.latest,
+            Proof {
+                verdict: Verdict::Real,
+                check_id: "k3x9q2".into(),
+                recorded_at_ms: 1000
+            }
+        );
         assert_eq!(near_sdk::serde_json::to_string(&record).unwrap(), json);
     }
 }

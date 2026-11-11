@@ -27,7 +27,7 @@ You should see sample card A's record: `"verdict":"Real"`, `"check_id":"sample-a
 - Click **Sample B**, then the **Verified card** tab: you see **Held**, the picture wallets show for the NFT, and what the card holds from paid checks.
 - Click **Sample C**: you see **No record**.
 
-**3. Run the demo agent.** It pays for two checks with a key that can do nothing else:
+**3. Run the demo agent.** It pays for two checks with a key that can do nothing else (needs Node 20.9 or newer):
 
 ```
 git clone https://github.com/pab412/Tally-near
@@ -233,6 +233,8 @@ Every card on the page is made up and marked SAMPLE.
 
 ### Run it
 
+Needs Node 20.9 or newer.
+
 ```
 cd web
 npm install
@@ -293,6 +295,7 @@ Without `RECORD_PASSWORD`, the account and the key all set, recording is switche
 - **The contract accounts still have their deploy keys.** "Nobody can change it" is true of the rules as written. On testnet, whoever holds a contract account's full-access key could still replace its code. Deleting those keys makes the rules permanent, and anyone can check that an account has none; that is the step before mainnet.
 - **Only unclaimed money is lost with a burned card.** A holder can withdraw whenever the registry says Real, so a card that is corrected later loses what it holds at that moment, not what was already taken out.
 - **The paid check is a choice.** Records are public, so an agent can read them for free. It pays for the receipt and to reward the trader.
+- **The demo's write buttons sit behind one shared password, with no limit on attempts.** That is why the keys behind them are function-call keys: each can only call `record`, or `mint` and `recheck`, on testnet, with a 0.25 NEAR gas allowance. A guessed password could add sample records to the testnet registry and nothing more.
 - **The picture is drawn off-chain**, by this site. The token's link carries only the fingerprint, and the record on NEAR is what counts.
 
 ## Built with

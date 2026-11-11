@@ -41,6 +41,7 @@ export default function VerifiedCards() {
                 width={1200}
                 height={1200}
                 sizes="(max-width: 940px) 92vw, 520px"
+                loading="eager"
               />
             </div>
             <p>

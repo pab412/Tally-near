@@ -1,0 +1,2 @@
+# One style for the four crates. Lines run to 120 so a rule and the words it answers with stay on one line.
+max_width = 120

@@ -43,18 +43,37 @@ fn is_check_id(s: &str) -> bool {
 impl TallyProof {
     #[init]
     pub fn new(attester: AccountId) -> Self {
-        Self { attester, proofs: LookupMap::new(Key::Proofs), cards: 0 }
+        Self {
+            attester,
+            proofs: LookupMap::new(Key::Proofs),
+            cards: 0,
+        }
     }
 
     /// Records a check. Attester only. A card already on record gets a new entry on top; nothing is overwritten.
     pub fn record(&mut self, fingerprint: String, verdict: Verdict, check_id: String) -> Record {
-        require!(env::predecessor_account_id() == self.attester, "Only Tally's attester can record a check");
-        require!(is_fingerprint(&fingerprint), "A fingerprint is 64 lower-case hex characters");
+        require!(
+            env::predecessor_account_id() == self.attester,
+            "Only Tally's attester can record a check"
+        );
+        require!(
+            is_fingerprint(&fingerprint),
+            "A fingerprint is 64 lower-case hex characters"
+        );
         require!(is_check_id(&check_id), "A check id is 1 to 32 letters, digits, - or _");
 
-        let proof = Proof { verdict, check_id, recorded_at_ms: env::block_timestamp_ms() };
+        let proof = Proof {
+            verdict,
+            check_id,
+            recorded_at_ms: env::block_timestamp_ms(),
+        };
         if !self.proofs.contains_key(&fingerprint) {
-            self.proofs.insert(fingerprint.clone(), Vector::new(Key::History { fingerprint: fingerprint.clone() }));
+            self.proofs.insert(
+                fingerprint.clone(),
+                Vector::new(Key::History {
+                    fingerprint: fingerprint.clone(),
+                }),
+            );
             self.cards += 1;
         }
         let history = self.proofs.get_mut(&fingerprint).unwrap();
@@ -66,12 +85,19 @@ impl TallyProof {
             r#"EVENT_JSON:{{"standard":"tally-proof","version":"1.0.0","event":"recorded","data":[{{"fingerprint":"{}","verdict":"{:?}","check_id":"{}","entry":{}}}]}}"#,
             fingerprint, proof.verdict, proof.check_id, entries
         ));
-        Record { fingerprint, latest: proof, entries }
+        Record {
+            fingerprint,
+            latest: proof,
+            entries,
+        }
     }
 
     /// Every entry for a card, oldest first: the first verdict and each correction since.
     pub fn history(&self, fingerprint: String) -> Vec<Proof> {
-        self.proofs.get(&fingerprint).map(|h| h.iter().cloned().collect()).unwrap_or_default()
+        self.proofs
+            .get(&fingerprint)
+            .map(|h| h.iter().cloned().collect())
+            .unwrap_or_default()
     }
 
     /// How many different cards have a record.
@@ -89,7 +115,11 @@ impl ProofRegistry for TallyProof {
     fn get(&self, fingerprint: String) -> Option<Record> {
         let history = self.proofs.get(&fingerprint)?;
         let latest = history.get(history.len() - 1)?.clone();
-        Some(Record { fingerprint, latest, entries: history.len() })
+        Some(Record {
+            fingerprint,
+            latest,
+            entries: history.len(),
+        })
     }
 }
 
@@ -124,10 +154,20 @@ mod tests {
         assert_eq!(c.get(FP.into()), None, "nothing on record before the check");
         let r = c.record(FP.into(), Verdict::Fake, "k3x9q2".into());
         assert_eq!(r.entries, 1);
-        assert_eq!(r.latest, Proof { verdict: Verdict::Fake, check_id: "k3x9q2".into(), recorded_at_ms: 1_000 });
+        assert_eq!(
+            r.latest,
+            Proof {
+                verdict: Verdict::Fake,
+                check_id: "k3x9q2".into(),
+                recorded_at_ms: 1_000
+            }
+        );
         assert_eq!(c.get(FP.into()), Some(r));
         assert_eq!(c.cards(), 1);
-        assert!(get_logs()[0].starts_with("EVENT_JSON:{\"standard\":\"tally-proof\""), "an event is logged");
+        assert!(
+            get_logs()[0].starts_with("EVENT_JSON:{\"standard\":\"tally-proof\""),
+            "an event is logged"
+        );
         assert!(get_logs()[0].contains("\"verdict\":\"Fake\""));
     }
 
@@ -137,9 +177,15 @@ mod tests {
         c.record(FP.into(), Verdict::Fake, "k3x9q2".into());
         as_account("tally.testnet", 5_000);
         let r = c.record(FP.into(), Verdict::Real, "k3x9q2-appeal".into());
-        assert_eq!((r.entries, r.latest.verdict, r.latest.recorded_at_ms), (2, Verdict::Real, 5_000));
+        assert_eq!(
+            (r.entries, r.latest.verdict, r.latest.recorded_at_ms),
+            (2, Verdict::Real, 5_000)
+        );
         let h = c.history(FP.into());
-        assert_eq!(h.iter().map(|p| p.verdict).collect::<Vec<_>>(), vec![Verdict::Fake, Verdict::Real]);
+        assert_eq!(
+            h.iter().map(|p| p.verdict).collect::<Vec<_>>(),
+            vec![Verdict::Fake, Verdict::Real]
+        );
         assert_eq!(h[0].recorded_at_ms, 1_000, "the first entry is untouched");
         assert_eq!(c.cards(), 1, "still one card");
     }

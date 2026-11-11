@@ -93,7 +93,16 @@ impl TallyCheck {
     pub fn new(owner: AccountId, registry: AccountId, cards: AccountId, fee: U128, trader_percent: u8) -> Self {
         require!(fee.0 > 0, "A check has to cost something");
         require!(trader_percent <= 100, "The trader's share is a percentage, at most 100");
-        Self { owner, registry, cards, fee: fee.0, trader_percent, credit: LookupMap::new(Key::Credit), takings: 0, checks: 0 }
+        Self {
+            owner,
+            registry,
+            cards,
+            fee: fee.0,
+            trader_percent,
+            credit: LookupMap::new(Key::Credit),
+            takings: 0,
+            checks: 0,
+        }
     }
 
     /// Loads the attached NEAR as credit for `account_id` (or for the caller). This is how an agent's owner sets
@@ -117,8 +126,16 @@ impl TallyCheck {
         proof_registry::ext(self.registry.clone())
             .with_static_gas(GAS_FOR_READING)
             .get(fingerprint.clone())
-            .and(verified_cards::ext(self.cards.clone()).with_static_gas(GAS_FOR_READING).nft_token(fingerprint.clone()))
-            .then(Self::ext(env::current_account_id()).with_static_gas(GAS_FOR_ANSWER).on_checked(agent, fingerprint))
+            .and(
+                verified_cards::ext(self.cards.clone())
+                    .with_static_gas(GAS_FOR_READING)
+                    .nft_token(fingerprint.clone()),
+            )
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_FOR_ANSWER)
+                    .on_checked(agent, fingerprint),
+            )
     }
 
     /// The registry's and the card contract's answers to `check`. Only this contract can call it.
@@ -132,7 +149,12 @@ impl TallyCheck {
     ) -> Answer {
         let Ok(record) = record else { env::panic_str(NO_ANSWER) };
         let Some(record) = record else {
-            return Answer { record: None, held_by: None, charged: U128(0), to_trader: U128(0) };
+            return Answer {
+                record: None,
+                held_by: None,
+                charged: U128(0),
+                to_trader: U128(0),
+            };
         };
 
         // charged on delivery; the credit is looked at again because other checks may have used it meanwhile
@@ -153,12 +175,19 @@ impl TallyCheck {
                     .with_static_gas(GAS_FOR_PAYING)
                     .with_attached_deposit(NearToken::from_yoctonear(to_trader))
                     .earn(fingerprint.clone())
-                    .then(Self::ext(env::current_account_id()).with_static_gas(GAS_FOR_SETTLING).on_trader_paid(U128(to_trader)))
+                    .then(
+                        Self::ext(env::current_account_id())
+                            .with_static_gas(GAS_FOR_SETTLING)
+                            .on_trader_paid(U128(to_trader)),
+                    )
                     .detach();
             }
         } else if holder.is_some() {
             // the verdict was corrected but the verified card is still there: have it burned
-            cards().with_static_gas(GAS_FOR_RECHECK).recheck(fingerprint.clone()).detach();
+            cards()
+                .with_static_gas(GAS_FOR_RECHECK)
+                .recheck(fingerprint.clone())
+                .detach();
         }
         self.takings += self.fee - to_trader;
 
@@ -166,7 +195,12 @@ impl TallyCheck {
             r#"EVENT_JSON:{{"standard":"tally_check","version":"1.0.0","event":"checked","data":[{{"agent":"{agent}","fingerprint":"{fingerprint}","verdict":"{:?}","charged":"{}","to_trader":"{to_trader}"}}]}}"#,
             record.latest.verdict, self.fee
         ));
-        Answer { record: Some(record), held_by: holder.filter(|_| real), charged: U128(self.fee), to_trader: U128(to_trader) }
+        Answer {
+            record: Some(record),
+            held_by: holder.filter(|_| real),
+            charged: U128(self.fee),
+            to_trader: U128(to_trader),
+        }
     }
 
     /// Whether the trader's share reached the verified card. Only this contract can call it. If it didn't (the card
@@ -185,12 +219,21 @@ impl TallyCheck {
         require!(credit > 0, "There is no credit to send back");
         Promise::new(account.clone())
             .transfer(NearToken::from_yoctonear(credit))
-            .then(Self::ext(env::current_account_id()).with_static_gas(GAS_FOR_SETTLING).on_refunded(account, U128(credit)))
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_FOR_SETTLING)
+                    .on_refunded(account, U128(credit)),
+            )
     }
 
     /// Whether the refund arrived. Only this contract can call it. If it didn't, the credit is put back.
     #[private]
-    pub fn on_refunded(&mut self, account_id: AccountId, amount: U128, #[callback_result] sent: Result<(), PromiseError>) -> U128 {
+    pub fn on_refunded(
+        &mut self,
+        account_id: AccountId,
+        amount: U128,
+        #[callback_result] sent: Result<(), PromiseError>,
+    ) -> U128 {
         if sent.is_ok() {
             return amount;
         }
@@ -201,12 +244,19 @@ impl TallyCheck {
 
     /// Sends the contract's own share of the fees to its owner. Credit that accounts loaded is never part of it.
     pub fn collect(&mut self) -> Promise {
-        require!(env::predecessor_account_id() == self.owner, "Only the owner can collect the contract's share");
+        require!(
+            env::predecessor_account_id() == self.owner,
+            "Only the owner can collect the contract's share"
+        );
         let amount = std::mem::take(&mut self.takings);
         require!(amount > 0, "There is nothing to collect yet");
         Promise::new(self.owner.clone())
             .transfer(NearToken::from_yoctonear(amount))
-            .then(Self::ext(env::current_account_id()).with_static_gas(GAS_FOR_SETTLING).on_collected(U128(amount)))
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_FOR_SETTLING)
+                    .on_collected(U128(amount)),
+            )
     }
 
     /// Whether the owner's share arrived. Only this contract can call it. If it didn't, it is put back.
@@ -286,8 +336,16 @@ mod tests {
 
     /// What the registry answers for a card whose latest verdict is `verdict`.
     fn says(verdict: Verdict) -> Result<Option<Record>, PromiseError> {
-        let latest = Proof { verdict, check_id: "k3x9q2".into(), recorded_at_ms: 500 };
-        Ok(Some(Record { fingerprint: FP.into(), latest, entries: 1 }))
+        let latest = Proof {
+            verdict,
+            check_id: "k3x9q2".into(),
+            recorded_at_ms: 500,
+        };
+        Ok(Some(Record {
+            fingerprint: FP.into(),
+            latest,
+            entries: 1,
+        }))
     }
 
     fn held() -> Result<Option<Held>, PromiseError> {
@@ -295,7 +353,11 @@ mod tests {
     }
 
     /// The agent asks, then the contract receives both answers.
-    fn checked(c: &mut TallyCheck, record: Result<Option<Record>, PromiseError>, card: Result<Option<Held>, PromiseError>) -> Answer {
+    fn checked(
+        c: &mut TallyCheck,
+        record: Result<Option<Record>, PromiseError>,
+        card: Result<Option<Held>, PromiseError>,
+    ) -> Answer {
         as_account(AGENT, 0);
         let _ = c.check(FP.into());
         as_account(DESK, 0);
@@ -309,9 +371,11 @@ mod tests {
             .filter(|receipt| receipt.receiver_id.as_str() == CARDS)
             .flat_map(|receipt| receipt.actions)
             .filter_map(|action| match action {
-                near_sdk::mock::MockAction::FunctionCallWeight { method_name, attached_deposit, .. } => {
-                    Some((String::from_utf8(method_name).unwrap(), attached_deposit.as_yoctonear()))
-                }
+                near_sdk::mock::MockAction::FunctionCallWeight {
+                    method_name,
+                    attached_deposit,
+                    ..
+                } => Some((String::from_utf8(method_name).unwrap(), attached_deposit.as_yoctonear())),
                 _ => None,
             })
             .collect()
@@ -328,7 +392,11 @@ mod tests {
         assert_eq!(answer.record.unwrap().latest.verdict, Verdict::Real);
         assert_eq!(answer.held_by, Some(id(TRADER)));
         assert_eq!((answer.charged.0, answer.to_trader.0), (FEE, 400));
-        assert_eq!(sent_to_cards(), vec![("earn".to_string(), 400)], "the share goes into the verified card itself");
+        assert_eq!(
+            sent_to_cards(),
+            vec![("earn".to_string(), 400)],
+            "the share goes into the verified card itself"
+        );
         assert_eq!((credit(&c), c.takings().0, c.terms().checks), (1_500, 600, 1));
         assert!(get_logs().join("\n").contains(r#""event":"checked""#));
     }
@@ -354,7 +422,11 @@ mod tests {
     fn a_corrected_card_that_still_has_its_verified_card_is_sent_to_be_burned() {
         let mut c = open();
         let answer = checked(&mut c, says(Verdict::Fake), held());
-        assert_eq!((answer.held_by, answer.to_trader.0), (None, 0), "it pays nothing and isn't shown as verified");
+        assert_eq!(
+            (answer.held_by, answer.to_trader.0),
+            (None, 0),
+            "it pays nothing and isn't shown as verified"
+        );
         assert_eq!(sent_to_cards(), vec![("recheck".to_string(), 0)]);
     }
 
@@ -362,7 +434,15 @@ mod tests {
     fn a_card_tally_never_checked_costs_nothing() {
         let mut c = open();
         let answer = checked(&mut c, Ok(None), Ok(None));
-        assert_eq!(answer, Answer { record: None, held_by: None, charged: U128(0), to_trader: U128(0) });
+        assert_eq!(
+            answer,
+            Answer {
+                record: None,
+                held_by: None,
+                charged: U128(0),
+                to_trader: U128(0)
+            }
+        );
         assert_eq!((credit(&c), c.takings().0, c.terms().checks), (2_500, 0, 0));
     }
 
@@ -388,7 +468,10 @@ mod tests {
         assert_eq!(credit(&c), 500, "two checks out of 2,500");
         as_account(AGENT, 0);
         let refused = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| c.check(FP.into()).detach()));
-        assert!(refused.is_err(), "a third check is refused before the registry is asked");
+        assert!(
+            refused.is_err(),
+            "a third check is refused before the registry is asked"
+        );
         assert_eq!((credit(&c), c.takings().0), (500, 2 * FEE));
     }
 
@@ -507,7 +590,10 @@ mod tests {
         let c = open();
         let terms = c.terms();
         assert_eq!((terms.fee.0, terms.trader_percent, terms.checks), (FEE, 40, 0));
-        assert_eq!((terms.registry.as_str(), terms.cards.as_str()), ("proof.tally.testnet", CARDS));
+        assert_eq!(
+            (terms.registry.as_str(), terms.cards.as_str()),
+            ("proof.tally.testnet", CARDS)
+        );
     }
 
     #[test]
