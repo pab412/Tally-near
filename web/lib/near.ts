@@ -121,7 +121,7 @@ export function isTestnetAccount(value: unknown): value is string {
   return typeof value === "string" && TESTNET_ACCOUNT_RE.test(value);
 }
 
-/** A fingerprint that has a record on proof.notpab.testnet: the README and the explainer open it as a real example. */
+/** A fingerprint that has a record on proof.notpab.testnet: the README and the front page open it as a real example. */
 export const DEMO_RECORD_FP = "cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8";
 
 /** How many cards have a record, and how many verified cards exist. Each is null when its contract couldn't be read. */

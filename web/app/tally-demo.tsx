@@ -141,7 +141,7 @@ export default function TallyDemo({
           </button>
         </div>
         <nav className="topnav" aria-label="More">
-          <Link href="/how-it-works">How it works</Link>
+          <Link href="/">How it works</Link>
           <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
             <span className="dot" aria-hidden /> Live on NEAR testnet
           </a>
@@ -308,7 +308,7 @@ function LookupPanel({
         <>
           <p className="lede">
             Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.{" "}
-            <Link href="/how-it-works">New here? See how it works.</Link>
+            <Link href="/">New here? See how it works.</Link>
           </p>
           <VerdictBar tone="none" keyText="RESULT" word="No card yet" />
         </>

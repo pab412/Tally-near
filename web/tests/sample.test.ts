@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { isFingerprint } from "@/lib/fingerprint";
 import { sampleFingerprints } from "@/lib/sample";
 
-describe("the explainer's example fingerprints", () => {
+describe("the front page's example fingerprints", () => {
   it("are computed from the sample card's real bytes, not typed in", () => {
     const { fingerprint, oneByteChanged } = sampleFingerprints("sample-card-b.png");
     expect(fingerprint).toBe(createHash("sha256").update(readFileSync("public/samples/sample-card-b.png")).digest("hex"));

@@ -1,11 +1,11 @@
 "use client";
 
-// The explainer's two live readings from NEAR. Nothing here is written into the page ahead of time: each number and
+// The front page's two live readings from NEAR. Nothing here is written into the page ahead of time: each number and
 // verdict is whatever the contracts answer when the page is open, and says so when they can't be reached.
 
 import { useEffect, useState } from "react";
 import { formatMoment, liveCounts, lookup, type Lookup } from "@/lib/near";
-import { VerdictBar } from "../parts";
+import { VerdictBar } from "./parts";
 
 /** A real record's verdict, read from the proof registry. */
 export function LiveRecord({ fp, contractId }: { fp: string; contractId: string }) {

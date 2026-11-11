@@ -26,7 +26,7 @@ describe("fingerprint", () => {
 
   it("reads the fingerprint a link asks for, and ignores anything else in its place", () => {
     const fp = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
-    expect(recordPath(fp)).toBe(`/?fp=${fp}`);
+    expect(recordPath(fp)).toBe(`/demo?fp=${fp}`);
     expect(fingerprintFromParam(fp)).toBe(fp);
     expect(fingerprintFromParam([fp, "x"])).toBe(fp);
     expect(fingerprintFromParam(undefined)).toBeNull();

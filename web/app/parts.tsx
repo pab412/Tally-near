@@ -19,7 +19,7 @@ export type LookState =
 
 export const README = "https://github.com/pab412/Tally-near#try-recording-yourself";
 
-/** The page's name, top left on every page; it links to the demo. */
+/** The site's name, top left on every page; it links to the front page. */
 export function Wordmark() {
   return (
     <Link className="wordmark" href="/">

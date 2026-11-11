@@ -97,9 +97,12 @@ On Windows:
 
 `web` (Next.js). It looks like [tallypnl.com](https://tallypnl.com) because it is meant to be part of it.
 
-- **How it works** (`/how-it-works`). The whole idea in plain words, with the real parts beside them: a card and its fingerprint, a record read live from NEAR, and what the card contract answers when someone tries to mint a fake.
+- **The front page** (`/`). The whole idea in plain words, with the real parts beside them: a card and its fingerprint, a record read live from NEAR, and what the card contract answers when someone tries to mint a fake.
+
+The demo itself is at `/demo`, with three tabs:
+
 - **Look up a card.** Drop a PnL card picture on the page. Its fingerprint is computed in your browser (the picture is never uploaded), and the page asks the NEAR contract for that fingerprint. You see **Real**, **Unclear** or **Fake** with the date NEAR recorded it, the full history if a verdict was corrected, and a link to the explorer. A card with no record says "Tally hasn't checked this card yet."
-- **Open a record from a link.** `/?fp=<fingerprint>` opens that card's record straight away, with no picture needed. The address bar becomes that link whenever you look a card up, and **Copy the link to this record** copies it. This is what a QR code on a Tally card points to: scan it and you see what NEAR holds for that card.
+- **Open a record from a link.** `/demo?fp=<fingerprint>` opens that card's record straight away, with no picture needed. The address bar becomes that link whenever you look a card up, and **Copy the link to this record** copies it. This is what a QR code on a Tally card points to: scan it and you see what NEAR holds for that card.
 - **Record a check** (demo only). Pick a verdict and press Record. A server route signs the `record` call with a limited key that can do nothing else.
 - **Verified card.** Shows whether the card has a verified card and who holds it. With the demo password you can mint one or ask for a recheck, and watch the contract decide: it refuses a card that isn't Real ("The contract refused", in the contract's own words), and it burns a card whose verdict was corrected.
 
@@ -113,10 +116,10 @@ npm install
 npm run dev
 ```
 
-1. Open http://localhost:3000.
+1. Open http://localhost:3000. You see the front page, and its step 3 shows a real record read live from NEAR. Click **Try the demo**.
 2. Click **Sample A**. You see its fingerprint on the left and the answer from NEAR on the right.
 3. Click the explorer link to see the contract on NEAR testnet.
-4. Open http://localhost:3000/?fp=cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8. That fingerprint has a record on testnet, so the page shows **FAKE**, read live from the contract.
+4. Open http://localhost:3000/demo?fp=cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8. That fingerprint has a record on testnet, so the page shows **FAKE**, read live from the contract.
 
 ### Run the tests
 
@@ -165,7 +168,7 @@ Without `RECORD_PASSWORD`, the account and the key all set, recording is switche
 
 - [near-sdk-rs](https://github.com/near/near-sdk-rs), [near-api-js](https://github.com/near/near-api-js), [Next.js](https://nextjs.org)
 - Written with Claude Code (AI-generated code, reviewed by the team).
-- The panther picture on `/how-it-works` is Tally's own mascot, drawn for this page with an AI image tool (Higgsfield) from Tally's existing art. The card on its phone is a real Tally card, drawn by Tally's own card code with made-up figures (its coin is `$SAMPLE`).
+- The panther picture on the front page is Tally's own mascot, drawn for this page with an AI image tool (Higgsfield) from Tally's existing art. The card on its phone is a real Tally card, drawn by Tally's own card code with made-up figures (its coin is `$SAMPLE`).
 
 ## Licence
 

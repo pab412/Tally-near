@@ -1,4 +1,4 @@
-// Server only: the explainer's example fingerprints, computed from a sample card's real bytes rather than typed in.
+// Server only: the front page's example fingerprints, computed from a sample card's real bytes rather than typed in.
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";

@@ -102,7 +102,7 @@ describe("reading a verified card", () => {
   });
 });
 
-describe("live counts for the explainer", () => {
+describe("live counts for the front page", () => {
   // answers `cards` on the registry; the card contract answers its supply, or fails when `cardUp` is false
   const near = (cardUp: boolean) =>
     vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
