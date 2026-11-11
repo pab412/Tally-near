@@ -224,6 +224,14 @@ The same for the card contract, with `--contract-account-id card.<your-account>.
 
 Without `RECORD_PASSWORD`, the account and the key all set, recording is switched off and the page says so. Without `NEAR_CARD_KEY`, minting is. The server refuses any account that isn't on testnet.
 
+## What you still have to trust
+
+- **The verdict is Tally's.** NEAR makes a verdict permanent and public. It doesn't make it right. A wrong one is corrected by adding to the record, never by changing it.
+- **The contract accounts still have their deploy keys.** "Nobody can change it" is true of the rules as written. On testnet, whoever holds a contract account's full-access key could still replace its code. Deleting those keys makes the rules permanent, and anyone can check that an account has none; that is the step before mainnet.
+- **Only unclaimed money is lost with a burned card.** A holder can withdraw whenever the registry says Real, so a card that is corrected later loses what it holds at that moment, not what was already taken out.
+- **The paid check is a choice.** Records are public, so an agent can read them for free. It pays for the receipt and to reward the trader.
+- **The picture is drawn off-chain**, by this site. The token's link carries only the fingerprint, and the record on NEAR is what counts.
+
 ## Built with
 
 - [near-sdk-rs](https://github.com/near/near-sdk-rs), [near-api-js](https://github.com/near/near-api-js), [Next.js](https://nextjs.org)
