@@ -239,7 +239,7 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 .split{padding-top:88px}
 .split h2{padding-bottom:20px;border-bottom:1px solid var(--border-strong)}
 .split-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 72px;align-items:start;padding-top:32px}
-.split-note{margin:20px 0 0;max-width:60ch;color:var(--text-secondary)}
+.split-mid{align-items:center}
 /* lists of what's included and what isn't: a thin check or a thin cross, no boxes */
 .ticks{margin:0 0 16px;padding:0;list-style:none}
 .ticks li{position:relative;padding:12px 0 12px 30px;border-bottom:1px solid var(--border);color:var(--text-secondary)}
@@ -276,12 +276,18 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 .faq{padding-top:40px}
 .faq details:first-child{border-top:1px solid var(--border-strong)}
 .faq details{border-bottom:1px solid var(--border)}
-.faq summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:60px;font:500 1.0625rem/1.35 var(--f-ui);letter-spacing:-.01em;cursor:pointer;list-style:none}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"";flex:none;width:11px;height:11px;background:linear-gradient(var(--text-muted),var(--text-muted)) center/100% 1px no-repeat,linear-gradient(var(--text-muted),var(--text-muted)) center/1px 100% no-repeat;transition:transform .2s}
-.faq details[open] summary::after{transform:rotate(45deg)}
-.faq summary:hover{color:var(--brand)}
+.faq summary,.more>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:60px;font:500 1.0625rem/1.35 var(--f-ui);letter-spacing:-.01em;cursor:pointer;list-style:none}
+.faq summary::-webkit-details-marker,.more>summary::-webkit-details-marker{display:none}
+.faq summary::after,.more>summary::after{content:"";flex:none;width:11px;height:11px;background:linear-gradient(var(--text-muted),var(--text-muted)) center/100% 1px no-repeat,linear-gradient(var(--text-muted),var(--text-muted)) center/1px 100% no-repeat;transition:transform .2s}
+.faq details[open] summary::after,.more[open]>summary::after{transform:rotate(45deg)}
+.faq summary:hover,.more>summary:hover{color:var(--brand)}
 .faq details p{margin:0;padding:0 0 22px;max-width:62ch;color:var(--text-secondary)}
+/* detail for whoever wants it, on any page: closed until opened, in the same row the Questions page uses */
+.more{margin-top:64px;border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border)}
+.split .more{margin-top:36px}
+.more[open]{padding-bottom:28px}
+.more .refusals{margin-top:0}
+.more>.frame{max-width:620px}
 
 /* the front page's ledger: what the three contracts hold right now, in one frame with a tab for each. A row opens to
    show the card's whole history. Under 940px the columns fold away: a row keeps the card and its verdict, and the rest
@@ -299,11 +305,10 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 /* the registry's tools: find a card by its fingerprint, and read the records by card or entry by entry */
 .ledger-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;padding:14px 22px;border-bottom:1px solid var(--border)}
 .ledger-find{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0}
-.ledger-find label{color:var(--text-muted);font-size:.875rem;white-space:nowrap}
 .ledger-find div{position:relative;display:flex;align-items:center;min-width:0}
 .ledger-find svg{position:absolute;left:12px;color:var(--text-muted);pointer-events:none}
 .ledger-find input{width:320px;max-width:100%;min-height:44px;padding:0 12px 0 36px;border:1px solid var(--border-strong);border-radius:var(--r);background:rgba(8,9,12,.6);font:400 .8125rem/1.2 var(--f-mono);transition:border-color .15s}
-.ledger-find input::placeholder{color:var(--text-muted)}
+.ledger-find input::placeholder{color:var(--text-muted);font-family:var(--f-ui);font-size:.875rem}
 .ledger-find input:hover{border-color:var(--text-muted)}
 .ledger-find input:focus{outline:none;border-color:var(--brand);box-shadow:var(--ring)}
 .ledger-view{display:flex;border:1px solid var(--border-strong);border-radius:var(--r);overflow:hidden}
@@ -315,9 +320,9 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 /* the rows: one grid for the column names and every row under them */
 .ledger-cols,.ledger-row{display:grid;gap:0 20px;align-items:center;padding:0 22px}
 .ledger-cols{min-height:44px;border-bottom:1px solid var(--border);color:var(--text-muted);font-size:.75rem}
-.cols-cards{grid-template-columns:72px minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,1.15fr) 20px}
+.cols-cards{grid-template-columns:72px minmax(0,1.4fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1.3fr) 20px}
 .cols-entries{grid-template-columns:minmax(0,1.1fr) 72px minmax(0,1.3fr) minmax(0,.8fr) minmax(0,1fr) minmax(0,1.5fr)}
-.cols-badges{grid-template-columns:72px minmax(0,1.3fr) minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 20px}
+.cols-badges{grid-template-columns:72px minmax(0,1.4fr) minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) 20px}
 .ledger-rows{margin:0;padding:0;list-style:none}
 .ledger-rows li+li{border-top:1px solid var(--border)}
 .ledger-row{width:100%;min-height:76px;border:0;background:none;font-size:.875rem;line-height:1.4;text-align:left}

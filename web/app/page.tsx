@@ -34,8 +34,7 @@ export default function Home() {
         <div>
           <h1>Receipts nobody can edit.</h1>
           <p className="doc-lede">
-            Tally catches fake crypto PnL cards. Every verdict is saved on NEAR, where nobody can change it, Tally included. A card that&apos;s real
-            earns its trader a badge that can&apos;t be bought.
+            Tally catches fake crypto PnL cards. Every verdict is saved on NEAR, where nobody can change it, Tally included.
           </p>
           <p className="doc-cta">
             <Link className="btn-primary" href={DEMO_PATH}>
@@ -64,22 +63,19 @@ export default function Home() {
           <li>
             <Status />
             <h2>Every check is saved on NEAR</h2>
-            <p>Tally checks a PnL card and writes the verdict, real or fake, to NEAR. Nobody can edit or delete it, Tally included.</p>
+            <p>Real or fake, the verdict goes on NEAR. Nobody can edit or delete it.</p>
             <Link href="/how-it-works">How it works</Link>
           </li>
           <li>
             <Status />
             <h2>Real cards earn a badge</h2>
-            <p>A real card earns its trader a verified card: an NFT that can&apos;t be bought or faked, and that burns if the verdict ever changes.</p>
+            <p>An NFT that can&apos;t be bought or faked. It burns if the verdict changes.</p>
             <Link href="/verified-cards">Verified cards</Link>
           </li>
           <li>
             <Status />
             <h2>AI agents pay to check</h2>
-            <p>
-              Before an AI agent trusts a trader, it pays a small fee to check their card on NEAR. Part of the fee goes into the trader&apos;s badge.
-              People look cards up for free.
-            </p>
+            <p>A bot pays a small fee, and part of it goes to the trader. People look cards up for free.</p>
             <Link href="/agents">For AI agents</Link>
           </li>
         </ul>

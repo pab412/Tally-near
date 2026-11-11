@@ -293,8 +293,7 @@ function LookupPanel({
       <h1 className="panel-title">Did Tally check this card?</h1>
       {look.phase === "idle" && (
         <p className="lede">
-          Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.{" "}
-          <Link href="/how-it-works">New here? See how it works.</Link>
+          Drop a card, or try a made-up one. The answer comes straight from NEAR. <Link href="/how-it-works">How it works</Link>
         </p>
       )}
       <Frame title="Proof record" aside={<span className="id">{contractId}</span>}>

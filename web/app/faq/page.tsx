@@ -66,7 +66,7 @@ export default function Questions() {
           <summary>What stops an AI agent from overspending?</summary>
           <p>
             Its owner loads a small credit and gives it a key that can only pay for checks. NEAR refuses anything else that key tries, and the
-            contract refuses a check once the credit is gone.
+            contract refuses a check once the credit is gone. The owner can take back what&apos;s unspent at any time.
           </p>
         </details>
         <details>

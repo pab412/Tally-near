@@ -47,8 +47,7 @@ export default function ForAgents() {
   return (
     <DocPage current="agents">
       <PageHead title="For AI agents">
-        An AI agent that follows calls or copies trades has to know which traders are real. The answer is one call to NEAR, with no Tally server and no
-        API key in between.
+        An AI agent that copies trades has to know which traders are real. The answer is one call to NEAR: no Tally server, no API key.
       </PageHead>
 
       <section className="split" aria-labelledby="read">
@@ -57,9 +56,8 @@ export default function ForAgents() {
         </h2>
         <div className="split-cols">
           <div className="prose">
-            <p>Ask the contract for a card&apos;s fingerprint. It answers with the verdict, Tally&apos;s id for the check and the time NEAR recorded it.</p>
-            <p>The answer comes back as bytes of JSON. Nothing comes back for a card Tally has never checked.</p>
-            <p>This costs nothing and needs no account. It is the same call this site makes.</p>
+            <p>Ask the contract for a card&apos;s fingerprint. It answers with the verdict and the time, or nothing for a card Tally never checked.</p>
+            <p>Free, with no account. It&apos;s the same call this site makes.</p>
           </div>
           <div className="stack">
             <Frame title="The call">
@@ -81,35 +79,37 @@ export default function ForAgents() {
         <ol className="path">
           <li>
             <h3>The owner sets a limit</h3>
-            <p>They load a little NEAR as credit, and give the agent a key that can only pay for checks.</p>
+            <p>They load a little credit and give the agent a key that can only pay for checks.</p>
           </li>
           <li>
             <h3>The agent pays per answer</h3>
-            <p>Each answer comes straight from the record on NEAR and costs one fee from that credit. No record, no charge.</p>
+            <p>One fee per answer, out of that credit. No record, no charge.</p>
           </li>
           <li>
             <h3>The trader earns</h3>
-            <p>If the card is Real and has a verified card, part of the fee goes into it. A faker has no badge and earns nothing.</p>
+            <p>If the card is Real and has a badge, part of the fee goes into it.</p>
           </li>
         </ol>
         <div className="split-cols">
-          <div className="stack">
-            <Frame title="Run the demo agent yourself">
-              <pre className="code">
-                <code>{`git clone ${REPO}\ncd Tally-near/web && npm install\nnode scripts/demo-agent.mjs`}</code>
-              </pre>
-              <p>It makes its own throwaway testnet account, so there is nothing to set up. It is a script with one rule, not an AI.</p>
-            </Frame>
-            <Frame title="What a check costs" aside={<LiveTag>Read from NEAR just now</LiveTag>}>
-              <LiveTerms contractId={CHECK_CONTRACT_ID} />
-            </Frame>
-          </div>
-          <Frame title="What the demo agent prints" aside={<ExampleTag />}>
+          <Frame title="Run the demo agent yourself">
+            <pre className="code">
+              <code>{`git clone ${REPO}\ncd Tally-near/web && npm install\nnode scripts/demo-agent.mjs`}</code>
+            </pre>
+            <p>Nothing to set up: it makes its own throwaway testnet account. It&apos;s a script with one rule, not an AI.</p>
+          </Frame>
+          <Frame title="What a check costs" aside={<LiveTag>Read from NEAR just now</LiveTag>}>
+            <LiveTerms contractId={CHECK_CONTRACT_ID} />
+          </Frame>
+        </div>
+        {/* the long printout: there for whoever wants it, closed until opened */}
+        <details className="more">
+          <summary>What the demo agent prints</summary>
+          <Frame title="One run, shortened" aside={<ExampleTag />}>
             <pre className="code">
               <code>{RUN}</code>
             </pre>
           </Frame>
-        </div>
+        </details>
       </section>
 
       <section className="split" aria-labelledby="limit">
@@ -121,10 +121,6 @@ export default function ForAgents() {
               <li>Pay for a check, out of the credit its owner loaded</li>
               <li>Read any record for free</li>
             </ul>
-            <p className="muted">
-              Why pay when reading is free? For the receipt: a paid check leaves a public record on NEAR that this agent checked this card before
-              it acted.
-            </p>
           </div>
           <div>
             <h3>It can&apos;t</h3>
@@ -133,29 +129,6 @@ export default function ForAgents() {
               <li>Call any other contract, or anything here but the check</li>
               <li>Spend more than the credit that was loaded</li>
               <li>Be charged for a card that has no record</li>
-            </ul>
-            <p className="muted">NEAR enforces the key and the contract enforces the credit. The owner can take back what&apos;s unspent at any time.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="split" aria-labelledby="both">
-        <h2 id="both">What each side gets</h2>
-        <div className="split-cols">
-          <div>
-            <h3>The agent</h3>
-            <ul className="ticks">
-              <li>An answer nobody could have edited</li>
-              <li>The card&apos;s whole history, corrections included</li>
-              <li>No account with Tally and no API key</li>
-            </ul>
-          </div>
-          <div>
-            <h3>The trader</h3>
-            <ul className="ticks">
-              <li>A cut each time their real card is checked, paid into their badge</li>
-              <li>A reason to get every real card verified</li>
-              <li>A record they hold themselves, not one Tally keeps for them</li>
             </ul>
           </div>
         </div>

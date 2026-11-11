@@ -36,8 +36,6 @@ export interface Ledger {
   cards: number | null;
   /** The cards the ledger could name that have a record, the latest verdict first. */
   rows: LedgerRow[];
-  /** The named cards that have no record: Tally never checked them. */
-  unchecked: string[];
   /** The named cards NEAR couldn't be asked about just now. They are left out of the rows, never guessed. */
   unread: string[];
   /** Every verified card the card contract lists (its first page). Null when that contract couldn't be read. */
@@ -91,7 +89,6 @@ export async function loadLedger(known: readonly string[], opts: LedgerOptions =
   return {
     cards,
     rows,
-    unchecked: names.filter((_, i) => answers[i] === null),
     unread: names.filter((_, i) => answers[i] === "unread"),
     verified,
     verifiedTotal: supply === null ? (verified?.length ?? null) : Number(supply),

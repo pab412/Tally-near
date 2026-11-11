@@ -57,8 +57,7 @@ describe("the front page's ledger", () => {
     expect(ledger.rows.map((r) => r.fingerprint), "the latest verdict first").toEqual([D, A, B]);
     expect(ledger.rows[1].history, "a corrected card keeps every entry, oldest first").toEqual([fake, fixed]);
     expect(ledger.rows.map((r) => (r.held && r.held !== "unknown" ? r.held.holder : r.held))).toEqual(["trader.testnet", null, "trader.testnet"]);
-    expect(ledger.unchecked, "a card with no record is named, not shown as a row").toEqual([C]);
-    expect(ledger.unread).toEqual([]);
+    expect(ledger.unread, "a card with no record is not a row, and not one that couldn't be read").toEqual([]);
 
     expect(calls.filter((c) => c.startsWith("card.sample.testnet")).sort()).toEqual(["card.sample.testnet nft_tokens", "card.sample.testnet nft_total_supply"]);
     expect(calls).toContain("check.sample.testnet terms");
@@ -79,7 +78,6 @@ describe("the front page's ledger", () => {
     const noRegistry = await loadLedger([A, B, C], near({ down: "proof.sample.testnet" }).opts);
     expect(noRegistry.cards).toBeNull();
     expect(noRegistry.rows).toEqual([]);
-    expect(noRegistry.unchecked, "a card that couldn't be asked about is not called unchecked").toEqual([]);
     expect(noRegistry.unread).toEqual([A, B, C, D]);
     expect(noRegistry.verified).toHaveLength(2);
 
@@ -90,7 +88,6 @@ describe("the front page's ledger", () => {
     const ledger = await loadLedger([A, B, "not-a-fingerprint"], near({ lost: A }).opts);
     expect(ledger.rows.map((r) => r.fingerprint)).toEqual([D, B]);
     expect(ledger.unread).toEqual([A]);
-    expect(ledger.unchecked).toEqual([]);
   });
 
   it("finds one card by its whole fingerprint, with its verified card", async () => {

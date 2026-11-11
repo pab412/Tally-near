@@ -162,9 +162,8 @@ function Records({
   const answer = wanted !== null && asked?.fp === wanted ? asked.row : undefined; // undefined while NEAR is asked
   const found = answer && answer !== "unreachable" ? answer : null;
   const rows = found ? [found] : matches;
-  // the first card that was corrected starts open: it shows what the ledger is for
-  const corrected = ledger.rows.find((row) => row.history.length > 1)?.fingerprint;
-  const isOpen = (fp: string) => opened[fp] ?? (found ? true : !text && fp === corrected);
+  // rows start closed (the owner, 2026-11-11: "way too much readable information"); a card found by its fingerprint opens
+  const isOpen = (fp: string) => opened[fp] ?? found !== null;
   const { entries, corrections } = tally(ledger.rows);
   const unnamed = ledger.cards !== null && ledger.cards > ledger.rows.length && !ledger.unread.length;
 
@@ -172,7 +171,9 @@ function Records({
     <>
       <div className="ledger-tools">
         <div className="ledger-find">
-          <label htmlFor="ledger-find">Find a fingerprint</label>
+          <label htmlFor="ledger-find" className="visually-hidden">
+            Find a fingerprint
+          </label>
           <div>
             <SearchIcon />
             <input
@@ -180,7 +181,7 @@ function Records({
               type="search"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
-              placeholder="Paste one, or part of one"
+              placeholder="Find a fingerprint"
               maxLength={100}
               autoComplete="off"
               autoCapitalize="off"
@@ -207,7 +208,6 @@ function Records({
             <span />
             <span>Card</span>
             <span>Verdict</span>
-            <span>Check ID</span>
             <span>Recorded</span>
             <span>Verified card</span>
             <span />
@@ -266,14 +266,13 @@ function Records({
           ) : (
             <div className="ledger-empty">
               <b>No record for this fingerprint.</b>
-              Tally hasn&apos;t checked that card. A copy that differs by a single pixel has a different fingerprint.{" "}
-              <Link href={recordPath(wanted)}>Open it in the demo</Link>
+              Tally hasn&apos;t checked that card. <Link href={recordPath(wanted)}>Open it in the demo</Link>
             </div>
           )
         ) : text ? (
           <div className="ledger-empty">
-            <b>No card in this table matches “{typed.trim().slice(0, 64)}”.</b>A fingerprint is 64 characters. Paste a whole one to ask NEAR for it, or
-            drop the card on the demo page to get its fingerprint. <Link href={DEMO_PATH}>Open the demo</Link>
+            <b>No card in this table matches “{typed.trim().slice(0, 64)}”.</b>Paste a whole fingerprint (64 characters) to ask NEAR for it.{" "}
+            <Link href={DEMO_PATH}>Open the demo</Link>
           </div>
         ) : ledger.cards === null ? (
           <Note role="status" head="The registry couldn't be read just now.">
@@ -292,8 +291,8 @@ function Records({
         </span>
         {unnamed && (
           <span>
-            The registry holds {ledger.cards!.toLocaleString("en-US")} cards. It answers by fingerprint and keeps no list, so this table shows the ones
-            this site can name. Paste a whole fingerprint to find any other.
+            The registry holds {ledger.cards!.toLocaleString("en-US")} cards and keeps no list, so this table shows the ones this site can name. Paste a
+            whole fingerprint to find any other.
           </span>
         )}
         {ledger.unread.length > 0 && (
@@ -301,16 +300,6 @@ function Records({
             {ledger.unread.length} more couldn&apos;t be read just now.
           </span>
         )}
-        {ledger.unchecked.map((fp) => {
-          const card = cardOf(fp);
-          return (
-            card && (
-              <span key={fp}>
-                {card.label} has no record: Tally never checked it. <Link href={recordPath(fp)}>Look it up</Link>
-              </span>
-            )
-          );
-        })}
       </p>
     </>
   );
@@ -339,9 +328,8 @@ function RecordRow({
         <Thumb fp={fp} image={card?.image} />
         <CardCell fp={fp} label={card?.label} />
         <VerdictCell verdict={latest.verdict}>{history.length > 1 && <small>corrected {times(history.length - 1)}</small>}</VerdictCell>
-        <span className="id wide">{latest.check_id}</span>
         <time className="muted wide" dateTime={iso(latest.recorded_at_ms)}>
-          {formatMoment(latest.recorded_at_ms)}
+          {formatDay(latest.recorded_at_ms)}
         </time>
         <span className="wide">
           {held && held !== "unknown" ? (
@@ -359,7 +347,7 @@ function RecordRow({
       </button>
       <div className="ledger-detail" id={detail} hidden={!open}>
         <div>
-          <p className="label">History: {history.length === 1 ? "1 entry" : `${history.length} entries, oldest first`}. Nothing is ever removed.</p>
+          <p className="label">{history.length === 1 ? "History" : "History, oldest first"}</p>
           <History entries={history} />
           {held === "unknown" ? (
             <p className="ledger-held">Whether it has a verified card couldn&apos;t be read just now.</p>
@@ -422,7 +410,6 @@ function Badges({
         <span>Holder</span>
         <span>Since</span>
         <span>Holds</span>
-        <span>From check</span>
         <span />
       </div>
       <ul className="ledger-rows">
@@ -441,7 +428,7 @@ function Badges({
         })}
       </ul>
       <p className="ledger-foot">
-        <span>A verified card can&apos;t be sold or moved, and the contract burns it if the verdict is ever corrected.</span>
+        <span>Can&apos;t be sold or moved. Burns if the verdict is corrected.</span>
         {verifiedTotal !== null && verifiedTotal > verified.length && (
           <span>
             Showing the first {verified.length} of {verifiedTotal.toLocaleString("en-US")}.
@@ -481,7 +468,6 @@ function BadgeRow({
           {formatDay(held.mintedAtMs)}
         </time>
         <span className="wide">{holds}</span>
-        <span className="id wide">{held.checkId}</span>
         <span className="ledger-chev" aria-hidden />
       </button>
       <div className="ledger-detail" id={detail} hidden={!open}>
@@ -510,15 +496,10 @@ function BadgeRow({
               <time dateTime={iso(held.mintedAtMs)}>{formatDay(held.mintedAtMs)}</time>
             </Fact>
             <Fact label="Holds">
-              {holds} <span className="muted">from paid checks, the holder&apos;s to withdraw while the card is Real</span>
+              {holds} <span className="muted">from paid checks</span>
             </Fact>
             <Fact label="From check" mono>
               {held.checkId}
-            </Fact>
-            <Fact label="Picture link">
-              <a href={badgePath(fp)} target="_blank" rel="noreferrer">
-                /badge/{shortFingerprint(fp)}.png <ExternalIcon />
-              </a>
             </Fact>
           </dl>
           <p className="ledger-act">
@@ -540,21 +521,17 @@ function Checks({ terms }: { terms: CheckTerms | null }) {
       {/* said first, so nobody reads "paid" as something a visitor owes (the owner, 2026-11-11: "Users might think they have to pay to get something checked") */}
       <div className="ledger-lead">
         <b>Looking a card up is free for everyone.</b>
-        No wallet, no account, no fee. A paid check is something only an AI agent (a bot) does: it pays a small fee out of credit its owner loaded, and
-        half of that goes to the trader.
+        Only AI agents (bots) pay for a check.
       </div>
       <div className="ledger-pay">
         <div>
           <p className="label">What an AI agent pays</p>
           <TermsFacts terms={terms} />
         </div>
-        <div>
-          <p>Why would a bot pay when reading is free? For the receipt: a public record on NEAR that it checked this card before it acted.</p>
-          <p>No outside agent pays yet. This is testnet, so every check counted here is a test run: start the demo agent and the count goes up.</p>
-        </div>
+        <p>No outside agent pays yet. On testnet, every check counted here is a test run.</p>
       </div>
       <p className="ledger-foot">
-        <span>No record, no charge. The agent&apos;s key can pay for checks and nothing else.</span>
+        <span>No record, no charge.</span>
         <Link href="/agents">For AI agents</Link>
       </p>
     </>

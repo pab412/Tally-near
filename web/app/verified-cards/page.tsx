@@ -15,22 +15,22 @@ export default function VerifiedCards() {
   return (
     <DocPage current="cards">
       <PageHead title="Verified cards">
-        A verified card is a badge for a PnL card Tally found real. It&apos;s an NFT on NEAR that the trader holds, and its rules are built into the
-        contract, so nobody has to take Tally&apos;s word for them.
+        A badge for a PnL card Tally found real: an NFT on NEAR that the trader holds. Its rules are built into the contract, so nobody has to take
+        Tally&apos;s word.
       </PageHead>
 
       <section className="split" aria-labelledby="rules">
         <h2 id="rules">Three rules, enforced by the contract</h2>
-        <div className="split-cols">
+        <div className="split-cols split-mid">
           <ul className="rules">
             <li>
-              <strong>It&apos;s only minted for a real card.</strong> Before it mints, the contract asks the record on NEAR itself and has to hear Real.
+              <strong>It&apos;s only minted for a real card.</strong> The contract asks the record on NEAR itself.
             </li>
             <li>
-              <strong>It can&apos;t be sold or moved.</strong> It stays with the trader who earned it, so a verified card can&apos;t be bought.
+              <strong>It can&apos;t be sold or moved.</strong> So it can&apos;t be bought.
             </li>
             <li>
-              <strong>It burns if the verdict changes.</strong> Anyone can ask for a recheck, and the contract removes a card that&apos;s no longer Real.
+              <strong>It burns if the verdict changes.</strong> Anyone can ask for a recheck.
             </li>
           </ul>
           <Frame title="What the trader holds" aside={<ExampleTag />}>
@@ -44,10 +44,7 @@ export default function VerifiedCards() {
                 loading="eager"
               />
             </div>
-            <p>
-              The trader&apos;s own Tally card with a stamp. Wallets and explorers show it for the NFT, and it stops being drawn the moment the verdict is
-              corrected.
-            </p>
+            <p>The trader&apos;s own Tally card with a stamp. Wallets and explorers show it for the NFT.</p>
           </Frame>
         </div>
       </section>
@@ -58,18 +55,17 @@ export default function VerifiedCards() {
         </h2>
         <div className="split-cols">
           <div className="prose">
-            <p>When an AI agent pays to check a card, part of the fee goes into that card&apos;s verified card. The badge itself holds the money.</p>
-            <p>A faker has no badge, so a faker earns nothing.</p>
+            <p>When an AI agent pays to check a card, part of the fee goes into the card&apos;s badge. A faker has no badge and earns nothing.</p>
             <p>
               <Link href="/agents">See how the paid check works.</Link>
             </p>
           </div>
           <ul className="rules">
             <li>
-              <strong>The trader takes it out while the card is Real.</strong> The contract asks the record on NEAR before it pays.
+              <strong>The trader takes it out while the card is Real.</strong>
             </li>
             <li>
-              <strong>A badge that burns loses what it held.</strong> Nobody gets that money, Tally included: nothing in the contract can move it.
+              <strong>A badge that burns loses what it held.</strong> Nobody gets that money, Tally included.
             </li>
           </ul>
         </div>
@@ -80,22 +76,22 @@ export default function VerifiedCards() {
         <ol className="path">
           <li>
             <h3>Tally checks the card</h3>
-            <p>The verdict, Real, is written to the record on NEAR.</p>
+            <p>The verdict, Real, is written to NEAR.</p>
           </li>
           <li>
             <h3>Tally asks for the mint</h3>
-            <p>The card contract doesn&apos;t take the request on trust. It looks the card up on NEAR first.</p>
+            <p>The contract looks the card up on NEAR first.</p>
           </li>
           <li>
             <h3>The trader holds it</h3>
-            <p>It sits in the NEAR account the trader chose. They can give it up whenever they like; nobody else can take it.</p>
+            <p>In the NEAR account they chose. Nobody else can take it.</p>
           </li>
         </ol>
       </section>
 
-      <section className="split" aria-labelledby="refusals">
-        <h2 id="refusals">What the contract refuses</h2>
-        <p className="split-note">These are the contract&apos;s own answers, word for word. You can trigger the first two yourself in the demo.</p>
+      {/* the contract's own answers: there for whoever wants them, closed until opened */}
+      <details className="more">
+        <summary>What the contract refuses, word for word</summary>
         <dl className="refusals">
           {REFUSALS.map((r) => (
             <div key={r.says}>
@@ -104,7 +100,7 @@ export default function VerifiedCards() {
             </div>
           ))}
         </dl>
-      </section>
+      </details>
 
       <Onward href={DEMO_PATH} label="Open the demo">
         See one minted, refused and burned

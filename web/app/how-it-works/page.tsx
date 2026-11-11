@@ -28,8 +28,8 @@ export default function HowItWorks() {
   return (
     <DocPage current="how">
       <PageHead title="How it works">
-        Anyone can post a screenshot of a 100x. Tally already checks those cards, but the verdict lived in Tally&apos;s own database, so you had to trust
-        Tally not to change it. Now you don&apos;t have to.
+        Anyone can post a screenshot of a 100x. Tally checks those cards and saves each verdict on NEAR, so you don&apos;t have to trust Tally not to
+        change it.
       </PageHead>
 
       <Step
@@ -53,9 +53,8 @@ export default function HowItWorks() {
           </Frame>
         }
       >
-        <p>Your browser turns the picture into a 64-character code. The same picture always gives the same code.</p>
-        <p>Change anything, even one pixel, and the whole code changes. So an edited card can&apos;t borrow a real card&apos;s record.</p>
-        <p>The picture never leaves your device. Only the fingerprint goes to NEAR, and no name is ever attached to it.</p>
+        <p>Your browser turns the picture into a 64-character code. Change one pixel and the whole code changes.</p>
+        <p>The picture never leaves your device.</p>
       </Step>
 
       <Step
@@ -64,13 +63,11 @@ export default function HowItWorks() {
         visual={
           <Frame title="One card's history, oldest first" aside={<ExampleTag />}>
             <History entries={[...APPEAL]} timeZone="UTC" />
-            <p>The trader appealed and won. The first verdict is still there for everyone to see.</p>
           </Frame>
         }
       >
-        <p>When Tally finishes checking a card, it writes the fingerprint and the verdict to a contract on NEAR: Real, Unclear or Fake. NEAR adds the time.</p>
-        <p>Nobody can delete or rewrite a record, Tally included.</p>
-        <p>If a verdict turns out wrong, the correction is added on top. The earlier verdict stays in the history.</p>
+        <p>Tally writes the fingerprint and the verdict to NEAR: Real, Unclear or Fake. Nobody can delete or rewrite it, Tally included.</p>
+        <p>A correction is added on top. The earlier verdict stays.</p>
       </Step>
 
       <Step
@@ -87,9 +84,8 @@ export default function HowItWorks() {
           </Frame>
         }
       >
-        <p>Drop a card on the demo page, or open the link from a Tally card&apos;s QR code. The answer comes straight from NEAR.</p>
-        <p>No account, no wallet, and no Tally server in between.</p>
-        <p>An AI agent can read the same record the same way, before it trusts a trader.</p>
+        <p>Drop a card on the demo page and the answer comes straight from NEAR.</p>
+        <p>No account, no wallet, no Tally server in between.</p>
       </Step>
 
       <section className="split" aria-labelledby="onchain">
@@ -99,10 +95,10 @@ export default function HowItWorks() {
             <h3>On NEAR</h3>
             <ul className="ticks">
               <li>The card&apos;s fingerprint</li>
-              <li>The verdict: Real, Unclear or Fake</li>
+              <li>The verdict</li>
               <li>The time, set by NEAR</li>
               <li>Tally&apos;s id for the check</li>
-              <li>For a verified card, the NEAR account that holds it</li>
+              <li>The NEAR account that holds a verified card</li>
             </ul>
           </div>
           <div>
@@ -112,7 +108,7 @@ export default function HowItWorks() {
               <li>A name or a handle</li>
               <li>A wallet from another chain</li>
             </ul>
-            <p className="muted">The contract refuses anything that isn&apos;t a fingerprint, so a name can&apos;t be slipped in.</p>
+            <p className="muted">The contract refuses anything that isn&apos;t a fingerprint.</p>
           </div>
         </div>
       </section>
