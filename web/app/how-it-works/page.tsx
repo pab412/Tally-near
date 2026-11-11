@@ -79,11 +79,12 @@ export default function HowItWorks() {
               </a>
             </p>
           </div>
-          {/* Tally's own panther, drawn for this page: holding up a card's verified badge */}
+          {/* Tally's own panther, drawn for this page, holding up a phone. The card on the screen is a real Tally card
+              drawn by Tally's own card code with made-up figures (its coin is $SAMPLE). */}
           <Image
             className="doc-art"
-            src="/art/panther-verified.webp"
-            alt="Tally's black panther holding up a phone that shows a green verified badge"
+            src="/art/panther-card.webp"
+            alt="Tally's black panther holding up a phone that shows a verified Tally PnL card for a sample trade"
             width={1800}
             height={1195}
             sizes="(max-width: 940px) 100vw, 900px"
