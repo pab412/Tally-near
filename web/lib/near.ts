@@ -87,6 +87,10 @@ export function viewRequest(method: string, args: object, contractId: string) {
   };
 }
 
+/** The same request as a command to paste into a terminal: what the For AI agents page gives a developer to copy. */
+export const curlFor = (method: string, args: object, contractId: string) =>
+  `curl -s ${RPC_URL} \\\n  -H 'content-type: application/json' \\\n  -d '${JSON.stringify(viewRequest(method, args, contractId))}'`;
+
 /** Calls a read-only contract function and returns its JSON result. */
 export async function viewCall<T>(method: string, args: object, opts: NearOptions = {}): Promise<T> {
   const doFetch = opts.fetch ?? fetch;

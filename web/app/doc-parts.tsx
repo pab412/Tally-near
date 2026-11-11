@@ -52,6 +52,35 @@ export function Step({ n, title, children, visual }: { n: number; title: string;
   );
 }
 
+/**
+ * One block of a reading page: its title on a rule, then what it holds. `kicker` is the few words above the title
+ * that say which part of the page this is; `id` is also the block's link (`/agents#developers`).
+ */
+export function Section({ id, kicker, title, children }: { id: string; kicker?: string; title: ReactNode; children: ReactNode }) {
+  return (
+    <section className="split" id={id} aria-labelledby={`${id}-title`}>
+      {kicker && <p className="kicker">{kicker}</p>}
+      <h2 id={`${id}-title`}>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+/** Detail for whoever wants it: rows that stay closed until opened. */
+export function Rows({ children }: { children: ReactNode }) {
+  return <div className="rows">{children}</div>;
+}
+
+/** One of those rows: its title, and what opening it shows. */
+export function Row({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details>
+      <summary>{title}</summary>
+      {children}
+    </details>
+  );
+}
+
 /** The foot of a reading page: where to go next. */
 export function Onward({ href, label, children }: { href: string; label: string; children: ReactNode }) {
   return (

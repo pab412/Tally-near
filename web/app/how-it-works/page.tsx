@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { recordPath } from "@/lib/fingerprint";
-import { CONTRACT_ID, DEMO_RECORD_FP } from "@/lib/near";
+import { CONTRACT_ID, DEMO_RECORD_FP, explorerAccountUrl } from "@/lib/near";
+import { CONTRACT_TESTS } from "@/lib/repo-facts";
 import { sampleFingerprints } from "@/lib/sample";
-import { DocPage, Onward, PageHead, Step } from "../doc-parts";
+import { DocPage, Onward, PageHead, REPO, Row, Rows, Section, Step } from "../doc-parts";
+import { ExternalIcon } from "../icons";
 import { LiveRecord } from "../live";
 import { ExampleTag, Fingerprint, Frame, History, LiveTag } from "../parts";
 
@@ -27,14 +29,13 @@ const APPEAL = [
 export default function HowItWorks() {
   return (
     <DocPage current="how">
-      <PageHead title="How it works">
-        Anyone can post a screenshot of a 100x. Tally checks those cards and saves each verdict on NEAR, so you don&apos;t have to trust Tally not to
-        change it.
+      <PageHead title="How a screenshot becomes proof anyone can check.">
+        Three steps. Tally checks the card and saves the verdict on NEAR, so you don&apos;t have to trust Tally not to change it.
       </PageHead>
 
       <Step
         n={1}
-        title="A card becomes a fingerprint"
+        title="Every card gets its own fingerprint"
         visual={
           <Frame title="From picture to fingerprint" aside={<ExampleTag />}>
             <div>
@@ -59,7 +60,7 @@ export default function HowItWorks() {
 
       <Step
         n={2}
-        title="Tally's verdict is written on NEAR"
+        title="The proof is recorded on NEAR"
         visual={
           <Frame title="One card's history, oldest first" aside={<ExampleTag />}>
             <History entries={[...APPEAL]} timeZone="UTC" />
@@ -72,7 +73,7 @@ export default function HowItWorks() {
 
       <Step
         n={3}
-        title="Anyone can check it"
+        title="Checking doesn't depend on trusting Tally"
         visual={
           <Frame title="Proof record" aside={<LiveTag>Read from NEAR just now</LiveTag>}>
             <LiveRecord fp={DEMO_RECORD_FP} contractId={CONTRACT_ID} />
@@ -88,8 +89,7 @@ export default function HowItWorks() {
         <p>No account, no wallet, no Tally server in between.</p>
       </Step>
 
-      <section className="split" aria-labelledby="onchain">
-        <h2 id="onchain">What goes on NEAR, and what never does</h2>
+      <Section id="onchain" title="What goes on NEAR, and what never does">
         <div className="split-cols">
           <div>
             <h3>On NEAR</h3>
@@ -111,7 +111,48 @@ export default function HowItWorks() {
             <p className="muted">The contract refuses anything that isn&apos;t a fingerprint.</p>
           </div>
         </div>
-      </section>
+      </Section>
+
+      <Section id="details" title="Explore the technical details">
+        <Rows>
+          <Row title="The fingerprint is a SHA-256 hash">
+            <p>
+              It is the SHA-256 hash of the picture&apos;s exact bytes, written as 64 lower-case hex characters. Your browser computes it with its
+              own built-in crypto.
+            </p>
+          </Row>
+          <Row title="Image privacy">
+            <p>The picture is read on your device and never uploaded. Only the fingerprint is sent to NEAR, and a fingerprint can&apos;t be turned back into the picture.</p>
+          </Row>
+          <Row title="Corrections and appeals">
+            <p>
+              A card&apos;s record is a list that only grows. A correction is a new entry on top, with its own check id and time. The latest entry
+              is the verdict that stands, and every earlier one stays readable.
+            </p>
+          </Row>
+          <Row title="The registry contract">
+            <p>
+              One method writes: <code>record</code>, which only Tally&apos;s account can call. The reads are free: <code>get</code>,{" "}
+              <code>history</code>, <code>cards</code> and <code>attester</code>. It has {CONTRACT_TESTS.proof} unit tests.
+            </p>
+            <p>
+              <a href={explorerAccountUrl(CONTRACT_ID)} target="_blank" rel="noreferrer">
+                {CONTRACT_ID} <ExternalIcon />
+              </a>{" "}
+              ·{" "}
+              <a href={`${REPO}/blob/main/contracts/proof/src/lib.rs`} target="_blank" rel="noreferrer">
+                Its source on GitHub <ExternalIcon />
+              </a>
+            </p>
+          </Row>
+          <Row title="A link to any record">
+            <p>
+              Every record has its own link: <code>/demo?fp=</code> followed by the fingerprint. A Tally card&apos;s QR code can point to it.{" "}
+              <Link href={recordPath(DEMO_RECORD_FP)}>Open one.</Link>
+            </p>
+          </Row>
+        </Rows>
+      </Section>
 
       <Onward href="/verified-cards" label="Verified cards">
         Next: what a real card can earn

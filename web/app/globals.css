@@ -44,7 +44,7 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 .topnav>a[aria-current]:not(.btn-primary)::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand)}
 .topnav>a.btn-primary{white-space:nowrap}.nav-short{display:none}
 .topnav>a.btn-primary[aria-current]{border-color:var(--brand)}
-@media(max-width:760px){.nav-long{display:none}.nav-short{display:inline}.topnav{width:100%;justify-content:space-between;gap:0 10px;font-size:.875rem}.topnav>a:not(.btn-primary){min-height:48px}.topnav>a.btn-primary{min-height:36px;padding:0 12px}}
+@media(max-width:760px){.nav-long,.topnav>a.nav-long{display:none}.nav-short{display:inline}.topnav{width:100%;justify-content:space-between;gap:0 10px;font-size:.875rem}.topnav>a:not(.btn-primary){min-height:48px}.topnav>a.btn-primary{min-height:36px;padding:0 12px}}
 
 /* the demo's own bar: its three tabs, and where it is reading from */
 .toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 24px;margin-top:28px;border-bottom:1px solid var(--border)}
@@ -205,7 +205,7 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 .foot{padding-top:24px;border-top:1px solid var(--border);color:var(--text-muted);font-size:.875rem}
 .foot p{margin:0 0 6px}
 
-/* the reading pages (home, how it works, verified cards, questions): each has one job. Section titles sit on a rule,
+/* the reading pages (home, how it works, verified cards, for AI agents, questions): each has one job. Section titles sit on a rule,
    with the words on one side and the thing they describe on the other. */
 .doc h1{margin:0;font:600 clamp(2.25rem,4.6vw,3.5rem)/1 var(--f-ui);letter-spacing:-.045em;text-wrap:balance}
 .doc-hero h1{font-size:clamp(2.75rem,6.4vw,5rem);line-height:.98;letter-spacing:-.055em}
@@ -221,6 +221,10 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
  mask-image:linear-gradient(90deg,transparent 2%,#000 34%,#000 90%,transparent),linear-gradient(0deg,transparent 3%,#000 22%,#000 90%,transparent);mask-composite:intersect}
 .doc-lede{margin:28px 0 0;max-width:44ch;color:var(--text-secondary);font-size:clamp(1.0625rem,1.5vw,1.25rem);line-height:1.5}
 .doc-cta{display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px;margin:36px 0 0}
+/* under the hero's buttons: where this stands, said plainly */
+.doc-fine{margin:22px 0 0;max-width:46ch;color:var(--text-muted);font-size:.875rem;line-height:1.5}
+/* a name from the code, inside a sentence */
+.doc :not(pre)>code{color:var(--text);font:400 .875em/1.4 var(--f-mono)}
 .bay-still{cursor:default}.bay-still:hover{border-color:var(--border);background:var(--surface)}.bay-still:hover::after{--t:rgba(244,243,245,.55)}
 
 .step{padding-top:80px}
@@ -240,6 +244,12 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 .split h2{padding-bottom:20px;border-bottom:1px solid var(--border-strong)}
 .split-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 72px;align-items:start;padding-top:32px}
 .split-mid{align-items:center}
+.prose+h3{margin-top:28px}
+/* the few words above a block's title that say which part of the page it is: a short pink line, then the words */
+.kicker{display:flex;align-items:center;gap:10px;margin:0 0 14px;color:var(--text-secondary);font-size:.875rem;line-height:1.4}
+.kicker::before{content:"";flex:none;width:20px;height:2px;background:var(--brand)}
+/* a long page's halves, as links at its top */
+.jump{display:flex;flex-wrap:wrap;gap:8px 28px;margin:28px 0 0;font-weight:500}
 /* lists of what's included and what isn't: a thin check or a thin cross, no boxes */
 .ticks{margin:0 0 16px;padding:0;list-style:none}
 .ticks li{position:relative;padding:12px 0 12px 30px;border-bottom:1px solid var(--border);color:var(--text-secondary)}
@@ -255,44 +265,62 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 .split h2 .status{margin-left:14px}
 /* a request or an answer, as text to copy */
 .code{margin:0;padding:14px 16px;border:1px solid var(--border);border-radius:var(--r);background:rgba(8,9,12,.7);color:var(--text-secondary);font:400 .8125rem/1.6 var(--f-mono);white-space:pre-wrap;overflow-wrap:anywhere}
-/* the front page's three parts: what each is, where it stands, and the page for it */
-.trio{padding:24px 0 0}
-.trio ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 56px;margin:0;padding:0;list-style:none}
-.trio li{display:flex;flex-direction:column;padding-top:20px;border-top:1px solid var(--border-strong)}
-.trio .status{margin-bottom:18px}
-.trio h2{font-size:1.375rem;letter-spacing:-.03em}
-.trio p{margin:12px 0 20px;color:var(--text-secondary);line-height:1.55}
-.trio a{margin-top:auto;align-self:flex-start;font-weight:500}
+/* three things side by side: what each is in a line or two, where it stands, and any page for it */
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:36px 56px;margin:0;padding:32px 0 0;list-style:none}
+.trio li{display:flex;flex-direction:column}
+.trio .status{margin-bottom:14px}
+.trio h3{margin:0;font-size:1.25rem;line-height:1.25;letter-spacing:-.025em}
+.trio p{margin:10px 0 0;color:var(--text-secondary);line-height:1.55}
+.trio a{margin-top:18px;align-self:flex-start;font-weight:500}
+/* a few numbers, each over what it counts */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px 56px;margin:0;padding:32px 0 0}
+.stats div{display:flex;flex-direction:column-reverse;gap:8px}
+.stats dt{color:var(--text-muted);font-size:.875rem;line-height:1.4}
+.stats dd{margin:0;font:600 clamp(2rem,3.6vw,2.75rem)/1 var(--f-ui);letter-spacing:-.04em;font-variant-numeric:tabular-nums}
 /* how a card gets its verified card: three steps in a row */
 .path{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px 56px;margin:0;padding:32px 0 0;list-style:none;counter-reset:path}
 .path li{counter-increment:path}
 .path li::before{content:counter(path);display:block;margin-bottom:12px;color:var(--brand);font:600 1.375rem/1 var(--f-ui);font-variant-numeric:tabular-nums}
 .path p{margin:0;color:var(--text-secondary);line-height:1.55}
-/* what the contract answers, word for word */
-.refusals{margin:24px 0 0;border-top:1px solid var(--border)}
-.refusals div{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:6px 40px;padding:16px 0;border-bottom:1px solid var(--border)}
-.refusals dt{color:var(--text-secondary)}
-.refusals dd{margin:0;color:var(--text)}
-.faq{padding-top:40px}
-.faq details:first-child{border-top:1px solid var(--border-strong)}
-.faq details{border-bottom:1px solid var(--border)}
-.faq summary,.more>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:60px;font:500 1.0625rem/1.35 var(--f-ui);letter-spacing:-.01em;cursor:pointer;list-style:none}
-.faq summary::-webkit-details-marker,.more>summary::-webkit-details-marker{display:none}
-.faq summary::after,.more>summary::after{content:"";flex:none;width:11px;height:11px;background:linear-gradient(var(--text-muted),var(--text-muted)) center/100% 1px no-repeat,linear-gradient(var(--text-muted),var(--text-muted)) center/1px 100% no-repeat;transition:transform .2s}
-.faq details[open] summary::after,.more[open]>summary::after{transform:rotate(45deg)}
-.faq summary:hover,.more>summary:hover{color:var(--brand)}
-.faq details p{margin:0;padding:0 0 22px;max-width:62ch;color:var(--text-secondary)}
-/* detail for whoever wants it, on any page: closed until opened, in the same row the Questions page uses */
-.more{margin-top:64px;border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border)}
-.split .more{margin-top:36px}
-.more[open]{padding-bottom:28px}
-.more .refusals{margin-top:0}
-.more>.frame{max-width:620px}
+/* pairs in two columns: what was tried and what the contract says, a method and what it does */
+.pairs{margin:32px 0 0;border-top:1px solid var(--border)}
+.split>h2+.pairs{margin-top:0;border-top:0}
+.pairs div{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:6px 40px;padding:16px 0;border-bottom:1px solid var(--border)}
+.pairs dt{color:var(--text-secondary)}
+.pairs dt>span,.pairs dt>a{display:block;width:fit-content;margin-top:2px;font-size:.875rem}
+.pairs dd{margin:0;color:var(--text)}
+/* detail for whoever wants it, on any page: rows that stay closed until opened. The Questions page is made of them. */
+.rows{margin-top:40px;border-top:1px solid var(--border-strong)}
+.split>h2+.rows{margin-top:0;border-top:0}
+.rows details{border-bottom:1px solid var(--border)}
+.rows summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:60px;font:500 1.0625rem/1.35 var(--f-ui);letter-spacing:-.01em;cursor:pointer;list-style:none}
+.rows summary::-webkit-details-marker{display:none}
+.rows summary::after{content:"";flex:none;width:11px;height:11px;background:linear-gradient(var(--text-muted),var(--text-muted)) center/100% 1px no-repeat,linear-gradient(var(--text-muted),var(--text-muted)) center/1px 100% no-repeat;transition:transform .2s}
+.rows details[open] summary::after{transform:rotate(45deg)}
+.rows summary:hover{color:var(--brand)}
+.rows details>p{margin:0;padding:0 0 14px;max-width:62ch;color:var(--text-secondary)}
+.rows details>p:last-child{padding-bottom:24px}
+.rows details>:not(summary):not(p){margin:0 0 24px}
+.rows strong{color:var(--text);font-weight:600}
+.rows .frame{max-width:620px}
+/* the Questions page: the search box, then a block of rows for each group */
+.faq-find{margin-top:40px;max-width:520px}
+.faq-find div{flex:1 1 auto}
+.faq .split{padding-top:56px}
+.faq-none{margin:40px 0 0;color:var(--text-secondary)}
+/* the read methods on the For AI agents page: a tab for each, then the call and what NEAR answers */
+.frame>.tabs{flex-wrap:wrap;gap:0 28px;padding-block:0}
+.frame>.tabs button{font-family:var(--f-mono);font-size:.875rem}
+.explorer>p{margin:0;color:var(--text-secondary);font-size:.9375rem;line-height:1.5}
+.explorer>p .id{display:block;margin-top:4px}
+.explorer>.label{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:32px;margin:18px 0 6px}
+.explorer .link-btn{min-height:32px;font-size:.8125rem}
 
 /* the front page's ledger: what the three contracts hold right now, in one frame with a tab for each. A row opens to
    show the card's whole history. Under 940px the columns fold away: a row keeps the card and its verdict, and the rest
    is in the opened row. */
 .ledger{margin:88px 0 0}
+.ledger>h2{margin-bottom:28px}
 .ledger-note{margin:12px 0 0;min-height:1.4em;font-size:.8125rem;line-height:1.4}
 .frame>.ledger-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 24px;min-height:52px;padding-block:0;background:rgba(255,255,255,.02)}
 .ledger-head .tabs button{min-height:52px}
@@ -304,13 +332,15 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 .ledger-panel>.note{margin:22px}
 /* the registry's tools: find a card by its fingerprint, and read the records by card or entry by entry */
 .ledger-tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 24px;padding:14px 22px;border-bottom:1px solid var(--border)}
-.ledger-find{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0}
-.ledger-find div{position:relative;display:flex;align-items:center;min-width:0}
-.ledger-find svg{position:absolute;left:12px;color:var(--text-muted);pointer-events:none}
-.ledger-find input{width:320px;max-width:100%;min-height:44px;padding:0 12px 0 36px;border:1px solid var(--border-strong);border-radius:var(--r);background:rgba(8,9,12,.6);font:400 .8125rem/1.2 var(--f-mono);transition:border-color .15s}
-.ledger-find input::placeholder{color:var(--text-muted);font-family:var(--f-ui);font-size:.875rem}
-.ledger-find input:hover{border-color:var(--text-muted)}
-.ledger-find input:focus{outline:none;border-color:var(--brand);box-shadow:var(--ring)}
+.ledger-find,.faq-find{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0}
+.ledger-find div,.faq-find div{position:relative;display:flex;align-items:center;min-width:0}
+.ledger-find svg,.faq-find svg{position:absolute;left:12px;color:var(--text-muted);pointer-events:none}
+.ledger-find input,.faq-find input{width:320px;max-width:100%;min-height:44px;padding:0 12px 0 36px;border:1px solid var(--border-strong);border-radius:var(--r);background:rgba(8,9,12,.6);font:400 .8125rem/1.2 var(--f-mono);transition:border-color .15s}
+.faq-find input{width:100%;min-height:48px;font:400 1rem/1.2 var(--f-ui)}
+.ledger-find input::placeholder,.faq-find input::placeholder{color:var(--text-muted);font-family:var(--f-ui);font-size:.875rem}
+.faq-find input::placeholder{font-size:1rem}
+.ledger-find input:hover,.faq-find input:hover{border-color:var(--text-muted)}
+.ledger-find input:focus,.faq-find input:focus{outline:none;border-color:var(--brand);box-shadow:var(--ring)}
 .ledger-view{display:flex;border:1px solid var(--border-strong);border-radius:var(--r);overflow:hidden}
 .ledger-view button{min-height:44px;padding:0 14px;border:0;background:none;color:var(--text-muted);font:500 .875rem/1 var(--f-ui);cursor:pointer;transition:color .15s,background .15s}
 .ledger-view button+button{border-left:1px solid var(--border-strong)}
@@ -365,7 +395,7 @@ button.ledger-row:hover,button.ledger-row[aria-expanded=true]{background:rgba(25
 .onward strong{font:600 clamp(1.5rem,2.6vw,2rem)/1.1 var(--f-ui);letter-spacing:-.035em}
 .onward strong::after{content:"";display:inline-block;width:.5em;height:.5em;margin:0 .2em 0 .5em;border-top:2px solid currentColor;border-right:2px solid currentColor;transform:translateY(-.12em) rotate(45deg)}
 .doc{padding-bottom:72px}
-@media(max-width:940px){.doc-hero{flex-direction:column;align-items:stretch;min-height:0;padding:40px 0 24px}.doc-art{position:static;width:100%;aspect-ratio:5/4;margin-top:8px;object-fit:cover;object-position:88% 50%;transform:none;-webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 94%,transparent),linear-gradient(0deg,transparent,#000 22%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 94%,transparent),linear-gradient(0deg,transparent,#000 22%,#000 86%,transparent)}.step{padding-top:72px}.step-body{grid-template-columns:1fr}.step:nth-of-type(odd) .step-visual{order:0}.split{padding-top:64px}.trio ul,.split-cols,.path{grid-template-columns:1fr}.refusals div{grid-template-columns:1fr}.page-head{padding-top:44px}.ledger{margin-top:64px}.ledger-cols,.ledger-row>.wide{display:none}.ledger-row{gap:0 16px;padding:12px 16px}.cols-cards,.cols-badges{grid-template-columns:72px minmax(0,1fr) 20px}.cols-cards>.ledger-thumb{grid-row:1/span 2}.cols-cards>.ledger-card,.cols-cards>.ledger-verdict{grid-column:2}.cols-cards>.ledger-chev{grid-column:3;grid-row:1/span 2}.cols-entries{grid-template-columns:72px minmax(0,1fr);gap:2px 16px}.cols-entries>.ledger-thumb{grid-column:1;grid-row:1/span 5;align-self:start;margin-top:4px}.cols-entries>:not(.ledger-thumb){grid-column:2}.ledger-detail{grid-template-columns:1fr;padding:8px 16px 24px}.frame>.ledger-head,.ledger-tools,.ledger-foot,.ledger-empty,.ledger-lead,.ledger-pay{padding-inline:16px}.ledger-panel>.busy{padding:0 16px}.ledger-panel>.note{margin:16px}.ledger-pay{grid-template-columns:1fr}.ledger-find,.ledger-find div{flex:1 1 auto}.ledger-find input{width:100%;font-size:1rem}.onward{margin-top:64px}}
+@media(max-width:940px){.doc-hero{flex-direction:column;align-items:stretch;min-height:0;padding:40px 0 24px}.doc-art{position:static;width:100%;aspect-ratio:5/4;margin-top:8px;object-fit:cover;object-position:88% 50%;transform:none;-webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 94%,transparent),linear-gradient(0deg,transparent,#000 22%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 94%,transparent),linear-gradient(0deg,transparent,#000 22%,#000 86%,transparent)}.step{padding-top:72px}.step-body{grid-template-columns:1fr}.step:nth-of-type(odd) .step-visual{order:0}.split{padding-top:64px}.trio,.split-cols,.path,.stats{grid-template-columns:1fr}.stats div{flex-direction:row-reverse;justify-content:flex-end;align-items:baseline;gap:14px}.stats dd{min-width:2.4ch;font-size:1.75rem}.pairs div{grid-template-columns:1fr}.faq .split{padding-top:44px}.page-head{padding-top:44px}.ledger{margin-top:64px}.ledger-cols,.ledger-row>.wide{display:none}.ledger-row{gap:0 16px;padding:12px 16px}.cols-cards,.cols-badges{grid-template-columns:72px minmax(0,1fr) 20px}.cols-cards>.ledger-thumb{grid-row:1/span 2}.cols-cards>.ledger-card,.cols-cards>.ledger-verdict{grid-column:2}.cols-cards>.ledger-chev{grid-column:3;grid-row:1/span 2}.cols-entries{grid-template-columns:72px minmax(0,1fr);gap:2px 16px}.cols-entries>.ledger-thumb{grid-column:1;grid-row:1/span 5;align-self:start;margin-top:4px}.cols-entries>:not(.ledger-thumb){grid-column:2}.ledger-detail{grid-template-columns:1fr;padding:8px 16px 24px}.frame>.ledger-head,.ledger-tools,.ledger-foot,.ledger-empty,.ledger-lead,.ledger-pay{padding-inline:16px}.ledger-panel>.busy{padding:0 16px}.ledger-panel>.note{margin:16px}.ledger-pay{grid-template-columns:1fr}.ledger-find,.ledger-find div{flex:1 1 auto}.ledger-find input{width:100%;font-size:1rem}.onward{margin-top:64px}}
 
 @media(max-width:700px){.ledger-head>a{display:none}}
 @media(max-width:560px){.tab-long{display:none}.tab-short{display:inline}}
