@@ -157,7 +157,7 @@ NEAR_CARD_KEY=ed25519:<a key of that account that can call mint and recheck on t
 ```
 
 3. Run `npm run dev`, open the **Record a check** tab, pick a sample card, choose a verdict, type your password and press **Record**.
-4. You see the verdict bar say RECORDED with a link to the transaction. Switch to **Look up a card**: the same card now shows that verdict.
+4. The record appears with its verdict and a link to the transaction. Switch to **Look up a card**: the same card now shows that verdict.
 
 Safer than a full-access key: add a function-call key that can only call `record` on your contract, and use that one.
 

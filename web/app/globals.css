@@ -175,7 +175,7 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 /* buttons: the site's frosted pink glass for the main action, a hairline one for the rest */
 .btn-primary,.btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:var(--r);border:1px solid var(--border-strong);background:rgba(255,255,255,.02);font:500 .9375rem/1.2 var(--f-ui);letter-spacing:-.005em;cursor:pointer;transition:background .2s,border-color .2s}
 .btn-secondary,.btn-small{min-height:40px;padding:0 16px;font-size:.875rem}
-a.btn-primary{color:var(--text);text-decoration:none}a.btn-primary:hover{color:var(--text)}
+a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-primary:hover,a.btn-secondary:hover{color:var(--text)}
 .btn-secondary:hover{border-color:var(--text-muted)}
 .btn-primary{border-color:var(--glass-edge);background:var(--glass);backdrop-filter:blur(14px)}
 .btn-primary:hover{background:var(--glass-hover)}
