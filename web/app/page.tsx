@@ -52,19 +52,19 @@ export default function Home() {
       <section className="trio" aria-label="The three parts">
         <ul>
           <li>
-            <Status state="live" />
+            <Status />
             <h2>Every check is saved on NEAR</h2>
             <p>Tally checks a PnL card and writes the verdict, real or fake, to NEAR. Nobody can edit or delete it, Tally included.</p>
             <Link href="/how-it-works">How it works</Link>
           </li>
           <li>
-            <Status state="soon" />
+            <Status />
             <h2>Real cards earn a badge</h2>
             <p>A real card earns its trader a verified card: an NFT that can&apos;t be bought or faked, and that burns if the verdict ever changes.</p>
             <Link href="/verified-cards">Verified cards</Link>
           </li>
           <li>
-            <Status state="soon" />
+            <Status />
             <h2>AI agents pay to check</h2>
             <p>Before an AI agent trusts a trader, it pays a small fee to check their card on NEAR. Part of the fee goes into the trader&apos;s badge.</p>
             <Link href="/agents">For AI agents</Link>

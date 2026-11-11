@@ -26,7 +26,7 @@ An AI agent can pay for a check with the **paid check** contract. Its owner load
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, and how the paid check talks to the card contract. 3 unit tests pass. |
 | Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 46 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
-Each part's state is also shown on the site next to it: "Live on testnet", or "Tested, going live" for a contract that passes its tests and the testnet run but isn't deployed at its `notpab.testnet` address yet.
+On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses.
 
 ## The proof registry
 
@@ -173,7 +173,7 @@ npm install
 node scripts/demo-agent.mjs
 ```
 
-It needs `check.notpab.testnet` to be deployed (see the table above); until then, point it at any deployed paid check with `CHECK_CONTRACT=<account>`. It makes its own throwaway testnet account with NEAR's testnet faucet (or uses yours: `AGENT_ACCOUNT=<account.json>`), then prints each step:
+It runs against `check.notpab.testnet` (`CHECK_CONTRACT=<account>` points it at another deployment). It makes its own throwaway testnet account with NEAR's testnet faucet (or uses yours: `AGENT_ACCOUNT=<account.json>`), then prints each step:
 
 1. The owner loads credit for two checks.
 2. The agent gets a key that can only call `check`.

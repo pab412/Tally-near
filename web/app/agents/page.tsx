@@ -53,7 +53,7 @@ export default function ForAgents() {
 
       <section className="split" aria-labelledby="read">
         <h2 id="read">
-          Read a record, free <Status state="live" />
+          Read a record, free <Status />
         </h2>
         <div className="split-cols">
           <div className="prose">
@@ -76,7 +76,7 @@ export default function ForAgents() {
 
       <section className="split" aria-labelledby="paid">
         <h2 id="paid">
-          The paid check <Status state="soon" />
+          The paid check <Status />
         </h2>
         <ol className="path">
           <li>

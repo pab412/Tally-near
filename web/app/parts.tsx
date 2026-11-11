@@ -51,13 +51,9 @@ const PAGES: readonly { id: PageId; href: string; label: string; short?: string 
   { id: "faq", href: "/faq", label: "Questions", short: "FAQ" },
 ];
 
-/** Where a part of this stands, said plainly next to it, so nothing reads as finished before it is. */
-export function Status({ state }: { state: "live" | "soon" }) {
-  return (
-    <span className="status" data-state={state}>
-      {state === "live" ? "Live on testnet" : "Tested, going live"}
-    </span>
-  );
+/** Marks a part as live. A part only gets it once its contract answers at its testnet address. */
+export function Status() {
+  return <span className="status">Live on testnet</span>;
 }
 
 /** The top of every page: the name, the site's few pages, and the way into the demo. */

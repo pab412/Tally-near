@@ -53,7 +53,7 @@ export default function VerifiedCards() {
 
       <section className="split" aria-labelledby="earns">
         <h2 id="earns">
-          And it holds money <Status state="soon" />
+          And it holds money <Status />
         </h2>
         <div className="split-cols">
           <div className="prose">

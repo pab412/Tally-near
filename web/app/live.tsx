@@ -85,7 +85,7 @@ export function LiveTerms({ contractId }: { contractId: string }) {
   if (state === "unreachable")
     return (
       <Note role="status">
-        <p>The paid check isn&apos;t answering at {contractId} yet. It is tested and waiting to go live there.</p>
+        <p>NEAR couldn&apos;t be reached just now. The paid check is at {contractId}.</p>
       </Note>
     );
   return (
