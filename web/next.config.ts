@@ -17,12 +17,9 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
-  // Links from before the demo moved to /demo: a card's record at /?fp=<fingerprint>, and the front page's old address.
+  // Links from before the demo moved to /demo: a card's record used to open at /?fp=<fingerprint>.
   async redirects() {
-    return [
-      { source: "/", has: [{ type: "query", key: "fp" }], destination: "/demo", permanent: false },
-      { source: "/how-it-works", destination: "/", permanent: false },
-    ];
+    return [{ source: "/", has: [{ type: "query", key: "fp" }], destination: "/demo", permanent: false }];
   },
   async headers() {
     return [

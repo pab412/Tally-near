@@ -30,6 +30,40 @@ export function Wordmark() {
   );
 }
 
+export type PageId = "home" | "how" | "cards" | "faq" | "demo";
+
+const PAGES: readonly { id: PageId; href: string; label: string }[] = [
+  { id: "how", href: "/how-it-works", label: "How it works" },
+  { id: "cards", href: "/verified-cards", label: "Verified cards" },
+  { id: "faq", href: "/faq", label: "Questions" },
+];
+
+/** The top of every page: the name, the site's few pages, and the way into the demo. */
+export function SiteHeader({ current }: { current: PageId }) {
+  return (
+    <header className="topbar">
+      <Wordmark />
+      <nav className="topnav" aria-label="Pages">
+        {PAGES.map((page) => (
+          <Link key={page.id} href={page.href} aria-current={current === page.id ? "page" : undefined}>
+            {page.label}
+          </Link>
+        ))}
+        <Link className="btn-primary btn-small" href="/demo" aria-current={current === "demo" ? "page" : undefined}>
+          {current === "demo" ? (
+            "Demo"
+          ) : (
+            <>
+              <span className="nav-long">Open the demo</span>
+              <span className="nav-short">Demo</span>
+            </>
+          )}
+        </Link>
+      </nav>
+    </header>
+  );
+}
+
 /** A fingerprint as the page shows it: the 64 characters in eight groups, and the same characters as bars. */
 export function Fingerprint({ fp }: { fp: string }) {
   return (

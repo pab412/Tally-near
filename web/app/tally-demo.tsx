@@ -18,7 +18,7 @@ import {
 } from "@/lib/near";
 import { CardPanel } from "./card-panel";
 import { ExternalIcon, SealIcon, UploadIcon } from "./icons";
-import { Contracts, Fingerprint, SwitchedOff, VerdictBar, Wordmark, send, type Card, type LookState } from "./parts";
+import { Contracts, Fingerprint, SiteHeader, SwitchedOff, VerdictBar, send, type Card, type LookState } from "./parts";
 
 const SAMPLES = [
   { file: "sample-card-a.png", label: "Sample A", hint: "Corrected once" },
@@ -127,8 +127,8 @@ export default function TallyDemo({
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <Wordmark />
+      <SiteHeader current="demo" />
+      <div className="toolbar">
         <div className="tabs" role="tablist" aria-label="What to do">
           <button role="tab" id="tab-lookup" aria-selected={tab === "lookup"} aria-controls="panel" onClick={() => setTab("lookup")}>
             Look up a card
@@ -140,13 +140,10 @@ export default function TallyDemo({
             Verified card
           </button>
         </div>
-        <nav className="topnav" aria-label="More">
-          <Link href="/">How it works</Link>
-          <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-            <span className="dot" aria-hidden /> Live on NEAR testnet
-          </a>
-        </nav>
-      </header>
+        <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
+          <span className="dot" aria-hidden /> Live on NEAR testnet
+        </a>
+      </div>
 
       <main className="stage" data-linked={(card && !card.preview) || undefined}>
         <section className="cardside" aria-label="The card">
@@ -308,7 +305,7 @@ function LookupPanel({
         <>
           <p className="lede">
             Drop a card, or try a made-up one. The answer comes straight from NEAR, with no Tally server in between.{" "}
-            <Link href="/">New here? See how it works.</Link>
+            <Link href="/how-it-works">New here? See how it works.</Link>
           </p>
           <VerdictBar tone="none" keyText="RESULT" word="No card yet" />
         </>

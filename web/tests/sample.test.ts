@@ -18,3 +18,12 @@ describe("the front page's example fingerprints", () => {
     expect(same).toBeLessThan(16); // two unrelated hashes share about 4 of 64 characters by chance
   });
 });
+
+describe("the Verified cards page's refusals", () => {
+  it("are the card contract's own words", async () => {
+    const { REFUSALS } = await import("@/lib/card-rules");
+    const contract = readFileSync("../contracts/card/src/lib.rs", "utf8");
+    expect(REFUSALS.length).toBeGreaterThan(3);
+    for (const { says } of REFUSALS) expect(contract, says).toContain(`"${says}"`);
+  });
+});

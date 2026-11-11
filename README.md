@@ -20,7 +20,7 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
 | Verified card contract (NFT) | `contracts/card` | 18 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). |
 | Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 30 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 31 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 More parts are planned and will be listed here as they're built.
 
@@ -97,7 +97,10 @@ On Windows:
 
 `web` (Next.js). It looks like [tallypnl.com](https://tallypnl.com) because it is meant to be part of it.
 
-- **The front page** (`/`). The whole idea in plain words, with the real parts beside them: a card and its fingerprint, a record read live from NEAR, and what the card contract answers when someone tries to mint a fake.
+- **The front page** (`/`): what this is in one screen, and the way on to each part.
+- **How it works** (`/how-it-works`): three steps beside the real parts they describe: a card and its fingerprint, a card's history, and a record read live from NEAR. Then what goes on NEAR and what never does.
+- **Verified cards** (`/verified-cards`): the NFT's three rules, how a card gets one, and what the contract answers, word for word, when someone tries something it doesn't allow.
+- **Questions** (`/faq`): short answers.
 
 The demo itself is at `/demo`, with three tabs:
 
@@ -116,7 +119,7 @@ npm install
 npm run dev
 ```
 
-1. Open http://localhost:3000. You see the front page, and its step 3 shows a real record read live from NEAR. Click **Try the demo**.
+1. Open http://localhost:3000. You see the front page. Its **How it works** page shows a real record read live from NEAR, in step 3. Click **Try the demo**.
 2. Click **Sample A**. You see its fingerprint on the left and the answer from NEAR on the right.
 3. Click the explorer link to see the contract on NEAR testnet.
 4. Open http://localhost:3000/demo?fp=cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8. That fingerprint has a record on testnet, so the page shows **FAKE**, read live from the contract.
@@ -128,7 +131,7 @@ cd web
 npm test
 ```
 
-You should see `30 passed`.
+You should see `31 passed`.
 
 ### Try recording yourself
 
