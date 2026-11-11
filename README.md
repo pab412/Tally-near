@@ -18,9 +18,9 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 | Part | Where | State |
 |---|---|---|
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
-| Verified card contract (NFT) | `contracts/card` | 18 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). |
+| Verified card contract (NFT) | `contracts/card` | 19 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). Each token links to its picture. Not yet deployed at `card.notpab.testnet`. |
 | Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card. 32 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 42 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 | Paid check for AI agents | not started | Planned: an agent pays a small fee to check a card, and part of it goes to the trader holding that card's verified card. Nothing of it is in the repository yet; the site marks it "In build". |
 
 Each part's state is also shown on the site next to it (Live on testnet, Tested and going live, In build).
@@ -58,8 +58,11 @@ Also:
 - `burn(token_id)`: the holder can give their own card up (needs 1 yoctoNEAR, so only a full-access key can do it). Nobody else can burn it, Tally included.
 - `nft_token`, `nft_tokens`, `nft_tokens_for_owner`, `nft_supply_for_owner`, `nft_total_supply`, `nft_metadata`: the standard views, so wallets and explorers can show it.
 - Mints and burns log the standard NEP-171 events.
+- **It has a picture: the card itself with a "Verified on NEAR" stamp.** Every token's `media` is `badge/<fingerprint>.png`, and `nft_metadata` gives the site's address as `base_uri` (the `pictures` argument of `new`), so a wallet or explorer joins the two. The site draws the picture on request (`web/app/badge/[file]/route.tsx`) and only while the card contract still holds the card and the registry's latest verdict is still Real. For any other card the link answers 404, so a corrected card stops showing "Verified" even before anyone asks for the burn.
 
-What is stored: the fingerprint, the NEAR account the trader chose to hold it, and the id of the check it came from. Never a name, a handle from another site or the picture.
+The site keeps no picture a visitor picks. Today it has pictures only of its own sample cards (`web/public/samples`, found by fingerprint); for any other card the badge shows the fingerprint in the card's place. Pictures of real Tally cards will come from Tally itself once Tally sends its checks to NEAR, which is not built yet.
+
+What is stored: the fingerprint, the NEAR account the trader chose to hold it, and the id of the check it came from. Never a name, a handle from another site or the picture. The picture link carries nothing but the fingerprint.
 
 ### Run the tests
 
@@ -68,9 +71,9 @@ cd contracts/card
 cargo test
 ```
 
-You should see `18 passed`. `contracts/types` has 2 more (`cd contracts/types && cargo test`).
+You should see `19 passed`. `contracts/types` has 2 more (`cd contracts/types && cargo test`).
 
-Unit tests can't make one contract call another, so the whole flow is also tested on testnet. `web/scripts/e2e-contracts.mjs` deploys both contracts under a testnet account you give it, then checks 19 things for real: a Real card mints after the registry is asked, a Fake or unchecked one is refused, nobody can fake the registry's answer, a transfer is refused, and a corrected verdict burns the card. It needs both `.wasm` files built (below) and a testnet account with about 5 NEAR:
+Unit tests can't make one contract call another, so the whole flow is also tested on testnet. `web/scripts/e2e-contracts.mjs` deploys both contracts under a testnet account you give it, then checks 20 things for real: a Real card mints after the registry is asked and links to its picture, a Fake or unchecked one is refused, nobody can fake the registry's answer, a transfer is refused, and a corrected verdict burns the card. It needs both `.wasm` files built (below) and a testnet account with about 5 NEAR:
 
 ```
 cd web
@@ -87,6 +90,12 @@ Needs Rust (`rustup target add wasm32-unknown-unknown`), cargo-near and near-cli
 cd contracts/proof
 cargo near build non-reproducible-wasm --no-abi
 near contract deploy proof.notpab.testnet use-file target/near/tally_proof.wasm with-init-call new json-args '{"attester":"notpab.testnet"}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
+```
+
+The card contract is built the same way in `contracts/card` and deployed to its own account, which needs about 2.5 NEAR for storage. Its `new` takes three things: who may mint, which registry to ask, and where pictures are served from (an `https://` address with no slash at the end):
+
+```
+near contract deploy card.notpab.testnet use-file target/near/tally_card.wasm with-init-call new json-args '{"attester":"notpab.testnet","registry":"proof.notpab.testnet","pictures":"https://tally-near.vercel.app"}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
 ```
 
 On Windows:
@@ -109,7 +118,7 @@ The demo itself is at `/demo`, with three tabs:
 - **Look up a card.** Drop a PnL card picture on the page. Its fingerprint is computed in your browser (the picture is never uploaded), and the page asks the NEAR contract for that fingerprint. You see **Real**, **Unclear** or **Fake** with the date NEAR recorded it, the full history if a verdict was corrected, and a link to the explorer. A card with no record says "Tally hasn't checked this card yet."
 - **Open a record from a link.** `/demo?fp=<fingerprint>` opens that card's record straight away, with no picture needed. The address bar becomes that link whenever you look a card up, and **Copy the link to this record** copies it. This is what a QR code on a Tally card points to: scan it and you see what NEAR holds for that card.
 - **Record a check** (demo only). Pick a verdict and press Record. A server route signs the `record` call with a limited key that can do nothing else.
-- **Verified card.** Shows whether the card has a verified card and who holds it. With the demo password you can mint one or ask for a recheck, and watch the contract decide: it refuses a card that isn't Real ("The contract refused", in the contract's own words), and it burns a card whose verdict was corrected.
+- **Verified card.** Shows whether the card has a verified card, who holds it, and the picture wallets show for it. With the demo password you can mint one or ask for a recheck, and watch the contract decide: it refuses a card that isn't Real ("The contract refused", in the contract's own words), and it burns a card whose verdict was corrected.
 
 Every card on the page is made up and marked SAMPLE.
 
@@ -124,7 +133,7 @@ npm run dev
 1. Open http://localhost:3000. You see the front page. Its **How it works** page shows a real record read live from NEAR, in step 3. Click **Try the demo**.
 2. Click **Sample A**. You see its fingerprint on the left and the answer from NEAR on the right.
 3. Click the explorer link to see the contract on NEAR testnet.
-4. Open http://localhost:3000/demo?fp=cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8. That fingerprint has a record on testnet, so the page shows **FAKE**, read live from the contract.
+4. Open http://localhost:3000/demo?fp=cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8. That fingerprint has a record on testnet, so the page shows **Fake**, read live from the contract.
 
 ### Run the tests
 
@@ -133,7 +142,7 @@ cd web
 npm test
 ```
 
-You should see `32 passed`.
+You should see `42 passed`.
 
 ### Try recording yourself
 
@@ -173,7 +182,8 @@ Without `RECORD_PASSWORD`, the account and the key all set, recording is switche
 
 - [near-sdk-rs](https://github.com/near/near-sdk-rs), [near-api-js](https://github.com/near/near-api-js), [Next.js](https://nextjs.org)
 - Written with Claude Code (AI-generated code, reviewed by the team).
-- The panther picture on the front page is Tally's own mascot, drawn for this page with an AI image tool (Higgsfield) from Tally's existing art. The card on its phone is a real Tally card, drawn by Tally's own card code with made-up figures (its coin is `$SAMPLE`).
+- The panther picture on the front page is Tally's own mascot, drawn for this page with an AI image tool (Higgsfield) from Tally's existing art. The card on its phone is a real Tally card, drawn by Tally's own card code with made-up figures (its coin is `$SAMPLE`). The same card is the example badge on the Verified cards page.
+- The badge picture is set in [Geist](https://vercel.com/font) (SIL Open Font License), in `web/assets/fonts`.
 
 ## Licence
 

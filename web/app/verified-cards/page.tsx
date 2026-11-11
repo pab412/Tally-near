@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { REFUSALS } from "@/lib/card-rules";
 import { DEMO_PATH } from "@/lib/fingerprint";
+import Image from "next/image";
 import Link from "next/link";
-import { SealIcon } from "../icons";
 import { DocPage, Onward, PageHead } from "../doc-parts";
-import { ExampleTag, Finding, Frame, Status } from "../parts";
+import { ExampleTag, Frame, Status } from "../parts";
 
 export const metadata: Metadata = {
   title: "Verified cards",
@@ -33,11 +33,20 @@ export default function VerifiedCards() {
               <strong>It burns if the verdict changes.</strong> Anyone can ask for a recheck, and the contract removes a card that&apos;s no longer Real.
             </li>
           </ul>
-          <Frame title="Verified card" aside={<ExampleTag />}>
-            <Finding tone="Real" word="Held" icon={<SealIcon />}>
-              Held by <span className="account">trader.testnet</span> since 6 Nov 2026.
-            </Finding>
-            <p>What the demo shows for a card that has its verified card.</p>
+          <Frame title="What the trader holds" aside={<ExampleTag />}>
+            <div className="badge-art">
+              <Image
+                src="/art/verified-badge-example.png"
+                alt="A badge picture: a Tally PnL card with a green Verified on NEAR stamp, the card's code and the date it was recorded"
+                width={1200}
+                height={1200}
+                sizes="(max-width: 940px) 92vw, 520px"
+              />
+            </div>
+            <p>
+              The trader&apos;s own Tally card with a stamp. Wallets and explorers show it for the NFT, and it stops being drawn the moment the verdict is
+              corrected.
+            </p>
           </Frame>
         </div>
       </section>

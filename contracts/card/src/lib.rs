@@ -11,6 +11,10 @@
 //! What is stored: the fingerprint, the NEAR account the trader chose to hold it, and the check it came from.
 //! Never a name, a handle from another site, a wallet on another chain or the picture. The holder can burn their
 //! own card at any time.
+//!
+//! Each token links to its picture (the card with a "Verified on NEAR" stamp) at `<pictures>/badge/<fingerprint>.png`.
+//! Tally's site draws it, and only while this contract still holds the card and the registry still says Real. The
+//! link carries nothing but the fingerprint.
 
 use near_contract_standards::non_fungible_token::core::NonFungibleTokenCore;
 use near_contract_standards::non_fungible_token::enumeration::NonFungibleTokenEnumeration;
@@ -51,6 +55,8 @@ pub struct TallyCard {
     attester: AccountId,
     /// The proof registry this contract asks before it mints or keeps a card.
     registry: AccountId,
+    /// Where the cards' pictures are served from: the start of every token's picture link.
+    pictures: String,
     cards: IterableMap<String, Card>,
     owned: LookupMap<AccountId, IterableSet<String>>,
 }
@@ -62,12 +68,14 @@ const PAGE: u64 = 50;
 const NOT_TRANSFERABLE: &str = "A verified card can't be transferred: it stays with the trader who earned it";
 const NO_ANSWER: &str = "The proof registry didn't answer, so nothing was changed";
 const ALREADY_MINTED: &str = "This card already has its verified card";
+const BAD_PICTURES: &str = "The picture link starts with https:// and has no slash at the end";
 
 #[near]
 impl TallyCard {
     #[init]
-    pub fn new(attester: AccountId, registry: AccountId) -> Self {
-        Self { attester, registry, cards: IterableMap::new(Key::Cards), owned: LookupMap::new(Key::Owners) }
+    pub fn new(attester: AccountId, registry: AccountId, pictures: String) -> Self {
+        require!(pictures.starts_with("https://") && !pictures.ends_with('/'), BAD_PICTURES);
+        Self { attester, registry, pictures, cards: IterableMap::new(Key::Cards), owned: LookupMap::new(Key::Owners) }
     }
 
     /// Mints the verified card for `fingerprint` to `owner`. Attester only, and only once the proof registry has
@@ -180,6 +188,8 @@ impl TallyCard {
                     "Tally checked this PnL card and found it real. It can't be transferred, and it is burned if the verdict is ever corrected."
                         .to_string(),
                 ),
+                // joined to `base_uri` (see `nft_metadata`) by wallets and explorers
+                media: Some(format!("badge/{fingerprint}.png")),
                 copies: Some(1),
                 issued_at: Some(card.minted_at_ms.to_string()),
                 // check ids and account ids are plain letters, digits, - _ and dots, so this is always valid JSON
@@ -250,7 +260,7 @@ impl NonFungibleTokenMetadataProvider for TallyCard {
             name: "Tally verified card".to_string(),
             symbol: "TALLY".to_string(),
             icon: None,
-            base_uri: None,
+            base_uri: Some(self.pictures.clone()),
             reference: None,
             reference_hash: None,
         }
@@ -270,6 +280,7 @@ mod tests {
     const TALLY: &str = "tally.testnet";
     const CARD: &str = "card.tally.testnet";
     const TRADER: &str = "trader.testnet";
+    const SITE: &str = "https://near.tally.example";
 
     fn id(who: &str) -> AccountId {
         who.parse().unwrap()
@@ -287,7 +298,7 @@ mod tests {
 
     fn fresh() -> TallyCard {
         as_account(TALLY, 1_000, 0);
-        TallyCard::new(id(TALLY), id("proof.tally.testnet"))
+        TallyCard::new(id(TALLY), id("proof.tally.testnet"), SITE.into())
     }
 
     /// What the registry answers for a card whose latest verdict is `verdict`.
@@ -318,11 +329,20 @@ mod tests {
         assert_eq!(meta.title.as_deref(), Some("Tally verified card 9f86d081"));
         assert_eq!(meta.issued_at.as_deref(), Some("2000"), "the chain's own time");
         assert_eq!(meta.extra.as_deref(), Some(r#"{"check_id":"k3x9q2","registry":"proof.tally.testnet"}"#));
+        assert_eq!(meta.media, Some(format!("badge/{FP}.png")), "the picture link carries the fingerprint and nothing else");
+        assert_eq!(c.nft_metadata().base_uri.as_deref(), Some(SITE), "and wallets join it to the site's address");
         assert_eq!(c.nft_token(FP.into()), Some(token.clone()));
         assert_eq!((supply(&c), c.nft_supply_for_owner(id(TRADER)).0), (1, 1));
         assert_eq!(c.nft_tokens_for_owner(id(TRADER), None, None), vec![token]);
         let log = get_logs().join("\n");
         assert!(log.contains(r#""standard":"nep171""#) && log.contains(r#""event":"nft_mint""#), "the standard mint event: {log}");
+    }
+
+    #[test]
+    #[should_panic(expected = "The picture link starts with https:// and has no slash at the end")]
+    fn the_picture_link_has_to_be_a_plain_https_address() {
+        as_account(TALLY, 1_000, 0);
+        TallyCard::new(id(TALLY), id("proof.tally.testnet"), "https://near.tally.example/".into());
     }
 
     #[test]

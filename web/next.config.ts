@@ -17,6 +17,8 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // The badge picture is drawn from files read at run time: the fonts, the logo and the sample cards.
+  outputFileTracingIncludes: { "/badge/[file]": ["./assets/fonts/*.ttf", "./public/tally-t.png", "./public/samples/*.png"] },
   // Links from before the demo moved to /demo: a card's record used to open at /?fp=<fingerprint>.
   async redirects() {
     return [{ source: "/", has: [{ type: "query", key: "fp" }], destination: "/demo", permanent: false }];

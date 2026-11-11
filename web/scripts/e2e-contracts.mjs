@@ -27,6 +27,7 @@ const acct = (id) => new Account(id, provider, signer);
 const R = acct(root.id);
 const tag = process.env.TAG || Date.now().toString(36).slice(-5);
 const PROOF = `proof${tag}.${root.id}`, CARD = `card${tag}.${root.id}`;
+const PICTURES = "https://tally-near.vercel.app"; // where a card's picture link starts
 const fp = () => createHash("sha256").update(randomBytes(32)).digest("hex");
 const gasOf = (o) => ((o.transaction_outcome.outcome.gas_burnt + o.receipts_outcome.reduce((s, r) => s + r.outcome.gas_burnt, 0)) / 1e12).toFixed(1) + " Tgas";
 const view = async (contractId, method, args = {}) => {
@@ -45,7 +46,7 @@ const call = (who, contractId, methodName, args, { gas = 100, deposit = 0n } = {
 
 const mode = process.env.MODE || "create"; // create | redeploy (new code, same state) | skip
 if (mode !== "skip") {
-  for (const [id, wasm, near, init] of [[PROOF, proofWasm, "1.8", { attester: root.id }], [CARD, cardWasm, "2.6", { attester: root.id, registry: PROOF }]]) {
+  for (const [id, wasm, near, init] of [[PROOF, proofWasm, "1.8", { attester: root.id }], [CARD, cardWasm, "2.6", { attester: root.id, registry: PROOF, pictures: PICTURES }]]) {
     if (mode === "create") await R.createSubAccount({ accountOrPrefix: id, publicKey: root.pub, nearToTransfer: nearToYocto(near) });
     const d = await acct(id).deployContract(readFileSync(wasm));
     console.log("deployed", id, readFileSync(wasm).length, "bytes", gasOf(d));
@@ -62,6 +63,7 @@ const m = await call(R, CARD, "mint", { fingerprint: A, owner: root.id });
 const token = getTransactionLastResult(m);
 ok("a Real card is minted after the contract asked the registry", token?.token_id === A && token?.owner_id === root.id, gasOf(m));
 ok("its metadata names the check", token?.metadata?.extra === JSON.stringify({ check_id: "e2e-a", registry: PROOF }), token?.metadata?.extra);
+ok("its picture link carries only the fingerprint", token?.metadata?.media === `badge/${A}.png`, token?.metadata?.media);
 ok("the mint logged the standard event", JSON.stringify(m.receipts_outcome.map((r) => r.outcome.logs)).includes("nft_mint"));
 
 await mustFail("a Fake card can't be minted", "Only a card the proof registry says is Real", () => call(R, CARD, "mint", { fingerprint: B, owner: root.id }));
@@ -75,7 +77,8 @@ await mustFail("it can't be transferred", "can't be transferred", () =>
 
 ok("nft_token shows it", (await view(CARD, "nft_token", { token_id: A }))?.owner_id === root.id);
 ok("nft_tokens_for_owner lists it", (await view(CARD, "nft_tokens_for_owner", { account_id: root.id })).some((t) => t.token_id === A));
-ok("nft_metadata follows the standard", (await view(CARD, "nft_metadata")).spec === "nft-1.0.0");
+const about = await view(CARD, "nft_metadata");
+ok("nft_metadata follows the standard and says where pictures are", about.spec === "nft-1.0.0" && about.base_uri === PICTURES, about.base_uri);
 
 const r1 = await call(acct(PROOF), CARD, "recheck", { fingerprint: A }); // anyone may ask
 ok("a recheck keeps a card that is still Real", getTransactionLastResult(r1) === true, gasOf(r1));

@@ -96,10 +96,15 @@ export async function viewCall<T>(method: string, args: object, opts: NearOption
   return JSON.parse(new TextDecoder().decode(Uint8Array.from(bytes))) as T;
 }
 
+/** A card's record on the registry: its latest verdict and how many entries it has. Null when Tally never checked it. */
+export async function latestRecord(fingerprint: string, opts: NearOptions = {}): Promise<ProofRecord | null> {
+  if (!isFingerprint(fingerprint)) throw new LookupError("That isn't a card fingerprint.");
+  return viewCall<ProofRecord | null>("get", { fingerprint }, opts);
+}
+
 /** Looks a card up: its current verdict and, when it has been corrected, every entry oldest first. */
 export async function lookup(fingerprint: string, opts: NearOptions = {}): Promise<Lookup> {
-  if (!isFingerprint(fingerprint)) throw new LookupError("That isn't a card fingerprint.");
-  const record = await viewCall<ProofRecord | null>("get", { fingerprint }, opts);
+  const record = await latestRecord(fingerprint, opts);
   if (!record) return { found: false };
   const history = record.entries > 1 ? await viewCall<Proof[]>("history", { fingerprint }, opts) : [record.latest];
   return { found: true, record, history };

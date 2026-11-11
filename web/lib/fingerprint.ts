@@ -19,6 +19,9 @@ export function fingerprintFromParam(value: string | string[] | undefined | null
 /** The link that opens a card's record directly: what a Tally card's QR code points to. */
 export const recordPath = (fp: string) => `${DEMO_PATH}?fp=${fp}`;
 
+/** A verified card's picture link: the same one the card contract gives the token (`badge/<fingerprint>.png`). */
+export const badgePath = (fp: string) => `/badge/${fp}.png`;
+
 export async function fingerprint(bytes: BufferSource): Promise<string> {
   const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { CardOutcome } from "@/lib/card";
-import { explorerAccountUrl, explorerTxUrl, formatDay, isTestnetAccount } from "@/lib/near";
+import { badgePath } from "@/lib/fingerprint";
+import { explorerAccountUrl, explorerTxUrl, formatDay, isTestnetAccount, shortFingerprint } from "@/lib/near";
 import { AlertIcon, ExternalIcon, SealIcon } from "./icons";
 import { Busy, Fact, Finding, Frame, Note, SwitchedOff, send, type Card, type LookState } from "./parts";
 
@@ -94,9 +95,21 @@ export function CardPanel({
               <Finding tone="Real" word="Held" icon={<SealIcon />}>
                 Held by <span className="account">{held.holder}</span> since {formatDay(held.mintedAtMs)}.
               </Finding>
+              {verdict === "Real" && (
+                <div className="badge-art">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- drawn fresh by /badge each time, so it's never a stale copy */}
+                  <img src={badgePath(held.fingerprint)} alt="The verified card's picture: this card with a Verified on NEAR stamp" width={1200} height={1200} />
+                  <p>The picture wallets and explorers show for this NFT.</p>
+                </div>
+              )}
               <dl className="facts">
                 <Fact label="From check" mono>
                   {held.checkId}
+                </Fact>
+                <Fact label="Picture link">
+                  <a href={badgePath(held.fingerprint)} target="_blank" rel="noreferrer">
+                    /badge/{shortFingerprint(held.fingerprint)}.png <ExternalIcon />
+                  </a>
                 </Fact>
                 <Fact label="Contract">
                   <a href={explorerAccountUrl(cardContractId)} target="_blank" rel="noreferrer">
