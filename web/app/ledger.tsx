@@ -79,9 +79,8 @@ export function Ledger({
 
   return (
     <section className="ledger" aria-labelledby="ledger-title">
-      <h2 id="ledger-title" className="visually-hidden">
-        On NEAR right now
-      </h2>
+      <p className="kicker">On NEAR right now</p>
+      <h2 id="ledger-title">What the three contracts hold.</h2>
       <div className="frame">
         <div className="ledger-head">
           <div className="tabs" role="tablist" aria-label="Which contract's records">

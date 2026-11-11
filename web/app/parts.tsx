@@ -50,12 +50,14 @@ export function Wordmark() {
 
 export type PageId = "home" | "how" | "cards" | "agents" | "faq" | "demo";
 
-// `short` is the name on a phone, where the whole menu has to fit one row
-const PAGES: readonly { id: PageId; href: string; label: string; short?: string }[] = [
+// `short` is the name on a phone, where the whole menu has to fit one row. A page with `short: null` is left off
+// that row: the site's name, just above it, already links home.
+const PAGES: readonly { id: PageId; href: string; label: string; short?: string | null }[] = [
+  { id: "home", href: "/", label: "Home", short: null },
   { id: "how", href: "/how-it-works", label: "How it works" },
   { id: "cards", href: "/verified-cards", label: "Verified cards", short: "Cards" },
   { id: "agents", href: "/agents", label: "For AI agents", short: "AI agents" },
-  { id: "faq", href: "/faq", label: "Questions", short: "FAQ" },
+  { id: "faq", href: "/faq", label: "FAQ" },
 ];
 
 /** Marks a part as live. A part only gets it once its contract answers at its testnet address. */
@@ -70,8 +72,8 @@ export function SiteHeader({ current }: { current: PageId }) {
       <Wordmark />
       <nav className="topnav" aria-label="Pages">
         {PAGES.map((page) => (
-          <Link key={page.id} href={page.href} aria-current={current === page.id ? "page" : undefined}>
-            <span className={page.short && "nav-long"}>{page.label}</span>
+          <Link key={page.id} className={page.short === null ? "nav-long" : undefined} href={page.href} aria-current={current === page.id ? "page" : undefined}>
+            <span className={page.short ? "nav-long" : undefined}>{page.label}</span>
             {page.short && <span className="nav-short">{page.short}</span>}
           </Link>
         ))}

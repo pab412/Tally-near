@@ -52,7 +52,7 @@ You should see `DON'T COPY` for the card recorded Fake, `COPY` for sample card B
 | Paid check contract | `contracts/check` | 21 unit tests pass, and the whole flow passes on testnet in the same run, with an agent whose key can only pay for checks. Live on testnet at `check.notpab.testnet`. |
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, and how the paid check talks to the card contract. 3 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 46 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 68 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses.
 
@@ -216,11 +216,11 @@ It is a script with one rule (`web/scripts/agent-rule.mjs`), not an AI. What it 
 
 `web` (Next.js). It looks like [tallypnl.com](https://tallypnl.com) because it is meant to be part of it.
 
-- **The front page** (`/`): what this is in one screen, and the way on to each part. Under that, a ledger of what the three contracts hold right now, read from NEAR as the page opens: the cards on record (open one to see its whole history, or find one by its fingerprint), the verified cards, and what a paid check costs. The registry answers by fingerprint and keeps no list, so the ledger shows the cards this site can name (its samples and every card with a verified card) and says so when the registry holds more.
-- **How it works** (`/how-it-works`): three steps beside the real parts they describe: a card and its fingerprint, a card's history, and a record read live from NEAR. Then what goes on NEAR and what never does.
-- **Verified cards** (`/verified-cards`): the NFT's three rules, its picture, how it holds money, how a card gets one, and what the contract answers, word for word, when someone tries something it doesn't allow.
-- **For AI agents** (`/agents`): the call that reads a record (free, live, and printed by the same code the site uses), with NEAR's answer read as the page opens. Then the paid check: how it works, what it costs (read live from the contract once it is deployed), how to run the demo agent, and what the agent's key can and can't do.
-- **Questions** (`/faq`): short answers.
+- **The front page** (`/`): what this is in one screen, then the problem, the fix and the three parts, each with the way on to its page. Under that, a ledger of what the three contracts hold right now, read from NEAR as the page opens: the cards on record (open one to see its whole history, or find one by its fingerprint), the verified cards, and what a paid check costs. The registry answers by fingerprint and keeps no list, so the ledger shows the cards this site can name (its samples and every card with a verified card) and says so when the registry holds more. It ends with what is live today, what isn't built yet, and what you still have to trust.
+- **How it works** (`/how-it-works`): three steps beside the real parts they describe: a card and its fingerprint, a card's history, and a record read live from NEAR. Then what goes on NEAR and what never does, and the technical details in rows that open.
+- **Verified cards** (`/verified-cards`): what the NFT is and stores, its three rules, how a card gets one and how it holds money. Then, in rows that open, its methods and what the contract answers, word for word, when someone tries something it doesn't allow.
+- **For AI agents** (`/agents`): two halves. For AI operators: what the paid check does, what it costs (read live from the contract), what the agent's key can and can't do, and how to run the demo agent. For developers: the endpoint and contracts, each free read method with the call to copy (built by the same code the site uses) and NEAR's answer read on the spot, the paid check's methods, what `check` answers, and every error word for word.
+- **FAQ** (`/faq`): short answers in four groups, with a search box.
 
 The demo itself is at `/demo`, with three tabs:
 
@@ -253,7 +253,7 @@ cd web
 npm test
 ```
 
-You should see `46 passed`.
+You should see `68 passed`.
 
 ### Try recording yourself
 

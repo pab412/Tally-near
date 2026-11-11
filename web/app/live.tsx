@@ -5,7 +5,7 @@
 // when they can't be reached.
 
 import { useEffect, useState, type ReactNode } from "react";
-import { checkTerms, explorerAccountUrl, lookup, verdictSentence, viewCall, type CheckTerms, type Lookup, type ProofRecord } from "@/lib/near";
+import { checkTerms, explorerAccountUrl, lookup, verdictSentence, viewCall, type CheckTerms, type Lookup } from "@/lib/near";
 import { inNear } from "@/scripts/agent-rule.mjs";
 import { ExternalIcon } from "./icons";
 import { Busy, Fact, Finding, Note, RecordFacts } from "./parts";
@@ -48,19 +48,20 @@ export function LiveRecord({ fp, contractId }: { fp: string; contractId: string 
   );
 }
 
-/** The contract's answer for a card exactly as an agent receives it, once decoded: plain JSON, read now. */
-export function LiveAnswer({ fp, contractId }: { fp: string; contractId: string }) {
+/** A contract's answer to a free read exactly as an agent receives it, once decoded: plain JSON, read now. */
+export function LiveAnswer({ method, args, contractId }: { method: string; args: object; contractId: string }) {
   const [answer, setAnswer] = useState<string | null>(null);
+  const sent = JSON.stringify(args);
   useEffect(() => {
     let live = true;
-    viewCall<ProofRecord | null>("get", { fingerprint: fp }, { contractId }).then(
-      (record) => live && setAnswer(JSON.stringify(record, null, 2)),
+    viewCall<unknown>(method, JSON.parse(sent), { contractId }).then(
+      (result) => live && setAnswer(JSON.stringify(result, null, 2)),
       () => live && setAnswer("NEAR couldn't be reached just now."),
     );
     return () => {
       live = false;
     };
-  }, [fp, contractId]);
+  }, [method, sent, contractId]);
   return (
     <pre className="code" aria-live="polite">
       <code>{answer ?? "Asking NEAR…"}</code>
