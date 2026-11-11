@@ -1,8 +1,10 @@
 //! What Tally's NEAR contracts share: what counts as a card's fingerprint, the verdicts, and a card's record as
 //! the proof registry returns it. The registry (`contracts/proof`) stores these; the verified card
-//! (`contracts/card`) reads them from the registry before it mints or keeps a card.
+//! (`contracts/card`) reads them from the registry before it mints or keeps a card; the paid check
+//! (`contracts/check`) reads them for an agent, and pays and rechecks verified cards.
 
-use near_sdk::{ext_contract, near};
+use near_sdk::json_types::U128;
+use near_sdk::{ext_contract, near, AccountId};
 
 /// What Tally concluded about a card.
 #[near(serializers = [json, borsh])]
@@ -45,6 +47,25 @@ pub trait ProofRegistry {
     fn get(&self, fingerprint: String) -> Option<Record>;
 }
 
+/// A verified card as the paid check needs to see it: who holds it. The card contract answers with a whole NFT
+/// token (NEP-171); the rest of it is ignored here.
+#[near(serializers = [json])]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Held {
+    pub owner_id: AccountId,
+}
+
+/// What the paid check asks of the verified card contract, through `verified_cards::ext(<card contract>)`.
+#[ext_contract(verified_cards)]
+pub trait VerifiedCards {
+    /// The verified card for a fingerprint, or nothing when the card has none.
+    fn nft_token(&self, token_id: String) -> Option<Held>;
+    /// Pays the attached NEAR into a verified card. Answers what the card holds now.
+    fn earn(&mut self, fingerprint: String) -> U128;
+    /// Asks the registry about a verified card again; it is burned if it's no longer Real.
+    fn recheck(&mut self, fingerprint: String) -> bool;
+}
+
 const FINGERPRINT_LEN: usize = 64; // a SHA-256 hash in hex
 
 /// A fingerprint is the SHA-256 hash of the card picture, in lower-case hex. Nothing else is accepted in its
@@ -66,6 +87,15 @@ mod tests {
         assert!(!is_fingerprint(&FP[..63]));
         assert!(!is_fingerprint(&format!("{}g", &FP[..63])));
         assert!(!is_fingerprint("@some_trader"));
+    }
+
+    #[test]
+    fn a_verified_card_is_read_from_the_whole_token_the_card_contract_answers_with() {
+        let json = format!(
+            r#"{{"token_id":"{FP}","owner_id":"trader.testnet","metadata":{{"title":"Tally verified card 9f86d081","media":"badge/{FP}.png","extra":"{{}}"}},"approved_account_ids":null}}"#
+        );
+        let held: Held = near_sdk::serde_json::from_str(&json).unwrap();
+        assert_eq!(held.owner_id.as_str(), "trader.testnet");
     }
 
     #[test]

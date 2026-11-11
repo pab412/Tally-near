@@ -8,4 +8,6 @@ export const REFUSALS: readonly { when: string; says: string }[] = [
   { when: "Anyone but Tally asking for a mint", says: "Only Tally's attester can mint a verified card" },
   { when: "Selling it or sending it to someone else", says: "A verified card can't be transferred: it stays with the trader who earned it" },
   { when: "Minting a second one for the same card", says: "This card already has its verified card" },
+  { when: "Anyone but the holder taking out its money", says: "Only the holder can withdraw what their verified card holds" },
+  { when: "Giving up a card that still holds money", says: "Withdraw what this card holds before giving it up" },
 ];

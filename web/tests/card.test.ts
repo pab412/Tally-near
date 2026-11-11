@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleCard, type SignCard } from "@/lib/card";
 import type { DemoEnv } from "@/lib/demo";
-import { isTestnetAccount, liveCounts, toVerifiedCard, verifiedCard } from "@/lib/near";
+import { checkTerms, isTestnetAccount, liveCounts, toVerifiedCard, verifiedCard } from "@/lib/near";
 
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const ENV: DemoEnv = {
@@ -12,7 +12,7 @@ const ENV: DemoEnv = {
   rpcUrl: "https://rpc.example",
 };
 const mint = { password: "sample-password", fingerprint: FP, action: "mint", holder: "sample-trader.testnet" };
-const CARD = { fingerprint: FP, holder: "sample-trader.testnet", mintedAtMs: 1, checkId: "sample-a1" };
+const CARD = { fingerprint: FP, holder: "sample-trader.testnet", mintedAtMs: 1, checkId: "sample-a1", holdsYocto: "0" };
 
 const okSigner = () =>
   vi.fn<SignCard>(async (req) => (req.action === "mint" ? { txHash: "SAMPLEHASH", card: CARD } : { txHash: "SAMPLEHASH", stands: false }));
@@ -80,7 +80,7 @@ describe("verified card route", () => {
 });
 
 describe("reading a verified card", () => {
-  const token = { token_id: FP, owner_id: "sample-trader.testnet", metadata: { issued_at: "1794348278858", extra: '{"check_id":"sample-a1","registry":"proof.sample.testnet"}' } };
+  const token = { token_id: FP, owner_id: "sample-trader.testnet", metadata: { issued_at: "1794348278858", extra: '{"check_id":"sample-a1","registry":"proof.sample.testnet","holds":"5000000000000000000000"}' } };
 
   it("asks the card contract for the fingerprint's token", async () => {
     const calls: unknown[] = [];
@@ -91,14 +91,27 @@ describe("reading a verified card", () => {
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: "tally", result: { result: bytes, logs: [] } }));
     }) as unknown as typeof globalThis.fetch;
     const card = await verifiedCard(FP, { fetch, contractId: "card.sample.testnet" });
-    expect(card).toEqual({ fingerprint: FP, holder: "sample-trader.testnet", mintedAtMs: 1794348278858, checkId: "sample-a1" });
+    expect(card).toEqual({ fingerprint: FP, holder: "sample-trader.testnet", mintedAtMs: 1794348278858, checkId: "sample-a1", holdsYocto: "5000000000000000000000" });
     expect(calls).toEqual([["card.sample.testnet", "nft_token", { token_id: FP }]]);
+  });
+
+  it("reads what a paid check costs from the paid check contract", async () => {
+    const terms = { fee: "10000000000000000000000", trader_percent: 50, registry: "proof.sample.testnet", cards: "card.sample.testnet", checks: 7 };
+    const calls: unknown[] = [];
+    const fetch = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const { params } = JSON.parse(String(init?.body));
+      calls.push([params.account_id, params.method_name]);
+      return new Response(JSON.stringify({ result: { result: Array.from(new TextEncoder().encode(JSON.stringify(terms))) } }));
+    }) as unknown as typeof globalThis.fetch;
+    expect(await checkTerms({ fetch, contractId: "check.sample.testnet" })).toEqual(terms);
+    expect(calls).toEqual([["check.sample.testnet", "terms"]]);
   });
 
   it("answers null when the card has none, and reads a token even if its extra isn't JSON", async () => {
     const none = vi.fn(async () => new Response(JSON.stringify({ result: { result: Array.from(new TextEncoder().encode("null")) } })));
     expect(await verifiedCard(FP, { fetch: none as unknown as typeof globalThis.fetch })).toBeNull();
-    expect(toVerifiedCard({ token_id: FP, owner_id: "a.testnet", metadata: { extra: "not json" } })).toEqual({ fingerprint: FP, holder: "a.testnet", mintedAtMs: 0, checkId: "" });
+    expect(toVerifiedCard({ token_id: FP, owner_id: "a.testnet", metadata: { extra: "not json" } })).toEqual({ fingerprint: FP, holder: "a.testnet", mintedAtMs: 0, checkId: "", holdsYocto: "0" });
+    expect(toVerifiedCard({ token_id: FP, owner_id: "a.testnet", metadata: { extra: '{"holds":"lots"}' } }).holdsYocto, "an amount that isn't a number counts as nothing").toBe("0");
   });
 });
 

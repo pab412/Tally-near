@@ -4,7 +4,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
 import { fingerprint, recordPath } from "@/lib/fingerprint";
-import { VERDICTS, LookupError, explorerAccountUrl, explorerTxUrl, lookup, verdictSentence, verifiedCard, type ProofRecord, type Verdict } from "@/lib/near";
+import {
+  CHECK_CONTRACT_ID,
+  VERDICTS,
+  LookupError,
+  explorerAccountUrl,
+  explorerTxUrl,
+  lookup,
+  verdictSentence,
+  verifiedCard,
+  type ProofRecord,
+  type Verdict,
+} from "@/lib/near";
 import { CardPanel } from "./card-panel";
 import { ExternalIcon, UploadIcon } from "./icons";
 import { Busy, Contracts, Fact, Finding, Fingerprint, Frame, History, Note, RecordFacts, SiteHeader, SwitchedOff, send, type Card, type LookState } from "./parts";
@@ -248,7 +259,7 @@ export default function TallyDemo({
         </section>
       </main>
 
-      <Contracts contractId={contractId} cardContractId={cardContractId} />
+      <Contracts ids={[contractId, cardContractId, CHECK_CONTRACT_ID]} />
     </div>
   );
 }

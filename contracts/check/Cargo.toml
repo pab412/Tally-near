@@ -1,0 +1,25 @@
+[package]
+name = "tally-check"
+description = "Tally's paid check on NEAR: an AI agent pays a small fee from credit its owner loaded to ask whether a PnL card is real, and part of the fee goes to the trader's verified card."
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/pab412/tally-near"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5.30"
+tally-types = { path = "../types" }
+
+[dev-dependencies]
+near-sdk = { version = "5.30", features = ["unit-testing"] }
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true

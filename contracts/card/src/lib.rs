@@ -12,6 +12,13 @@
 //! Never a name, a handle from another site, a wallet on another chain or the picture. The holder can burn their
 //! own card at any time.
 //!
+//! A verified card can hold money. Anyone can pay one (`earn`); the paid check (`contracts/check`) sends it a share of
+//! every fee an AI agent pays to check that card. The money belongs to the card, not to an account:
+//! - The holder takes it out with `withdraw`, and the contract asks the registry first. It pays only while the
+//!   registry still says Real.
+//! - A card burned because its verdict was corrected loses what it held. Nobody gets that money, Tally included:
+//!   no function of this contract can move it.
+//!
 //! Each token links to its picture (the card with a "Verified on NEAR" stamp) at `<pictures>/badge/<fingerprint>.png`.
 //! Tally's site draws it, and only while this contract still holds the card and the registry still says Real. The
 //! link carries nothing but the fingerprint.
@@ -26,7 +33,7 @@ use near_contract_standards::non_fungible_token::{Token, TokenId};
 use near_sdk::json_types::U128;
 use near_sdk::store::{IterableMap, IterableSet, LookupMap};
 use near_sdk::{
-    assert_one_yocto, env, near, require, AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise,
+    assert_one_yocto, env, near, require, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise,
     PromiseError, PromiseOrValue,
 };
 use tally_types::{is_fingerprint, proof_registry, Record, Verdict};
@@ -38,6 +45,8 @@ struct Card {
     /// Tally's id for the check that found the card real (tallypnl.com/check/<id>).
     check_id: String,
     minted_at_ms: u64,
+    /// What the card holds, in yoctoNEAR: paid in by `earn`, paid out by `withdraw`, lost if the card is burned.
+    earned: u128,
 }
 
 #[near]
@@ -59,15 +68,20 @@ pub struct TallyCard {
     pictures: String,
     cards: IterableMap<String, Card>,
     owned: LookupMap<AccountId, IterableSet<String>>,
+    /// What burned cards held, in yoctoNEAR. It stays in this contract for good: nothing here can move it.
+    forfeited: u128,
 }
 
 const GAS_FOR_REGISTRY: Gas = Gas::from_tgas(5);
 const GAS_FOR_ANSWER: Gas = Gas::from_tgas(10);
+const GAS_FOR_PAYOUT: Gas = Gas::from_tgas(15);
+const GAS_FOR_SETTLING: Gas = Gas::from_tgas(5);
 const PAGE: u64 = 50;
 
 const NOT_TRANSFERABLE: &str = "A verified card can't be transferred: it stays with the trader who earned it";
 const NO_ANSWER: &str = "The proof registry didn't answer, so nothing was changed";
 const ALREADY_MINTED: &str = "This card already has its verified card";
+const NO_CARD: &str = "There is no verified card for this fingerprint";
 const BAD_PICTURES: &str = "The picture link starts with https:// and has no slash at the end";
 
 #[near]
@@ -75,7 +89,7 @@ impl TallyCard {
     #[init]
     pub fn new(attester: AccountId, registry: AccountId, pictures: String) -> Self {
         require!(pictures.starts_with("https://") && !pictures.ends_with('/'), BAD_PICTURES);
-        Self { attester, registry, pictures, cards: IterableMap::new(Key::Cards), owned: LookupMap::new(Key::Owners) }
+        Self { attester, registry, pictures, cards: IterableMap::new(Key::Cards), owned: LookupMap::new(Key::Owners), forfeited: 0 }
     }
 
     /// Mints the verified card for `fingerprint` to `owner`. Attester only, and only once the proof registry has
@@ -104,7 +118,7 @@ impl TallyCard {
         require!(proof.verdict == Verdict::Real, "Only a card the proof registry says is Real can be verified");
         require!(!self.cards.contains_key(&fingerprint), ALREADY_MINTED);
 
-        let card = Card { owner: owner.clone(), check_id: proof.check_id, minted_at_ms: env::block_timestamp_ms() };
+        let card = Card { owner: owner.clone(), check_id: proof.check_id, minted_at_ms: env::block_timestamp_ms(), earned: 0 };
         self.cards.insert(fingerprint.clone(), card);
         if !self.owned.contains_key(&owner) {
             self.owned.insert(owner.clone(), IterableSet::new(Key::Owned { owner: owner.clone() }));
@@ -118,7 +132,7 @@ impl TallyCard {
     /// Asks the proof registry about a verified card again. Anyone can call it. The card is burned if the registry's
     /// latest verdict is no longer Real. Answers whether the card still stands.
     pub fn recheck(&mut self, fingerprint: String) -> Promise {
-        require!(self.cards.contains_key(&fingerprint), "There is no verified card for this fingerprint");
+        require!(self.cards.contains_key(&fingerprint), NO_CARD);
         self.ask_registry(&fingerprint)
             .then(Self::ext(env::current_account_id()).with_static_gas(GAS_FOR_ANSWER).on_rechecked(fingerprint))
     }
@@ -134,11 +148,68 @@ impl TallyCard {
         if record.is_some_and(|r| r.latest.verdict == Verdict::Real) {
             return true;
         }
-        if let Some(owner) = self.remove(&fingerprint) {
-            let memo = Some("The proof registry no longer says this card is Real");
-            NftBurn { owner_id: &owner, token_ids: &[&fingerprint], authorized_id: None, memo }.emit();
-        }
+        self.burn_corrected(&fingerprint);
         false
+    }
+
+    /// Pays a verified card. Anyone can; the paid check sends a share of each fee here. With no such card the call
+    /// fails and NEAR returns the money to the sender. Answers what the card holds now.
+    #[payable]
+    pub fn earn(&mut self, fingerprint: String) -> U128 {
+        let amount = env::attached_deposit().as_yoctonear();
+        require!(amount > 0, "Attach the NEAR this card earns");
+        let Some(card) = self.cards.get_mut(&fingerprint) else { env::panic_str(NO_CARD) };
+        card.earned += amount;
+        U128(card.earned)
+    }
+
+    /// The holder takes out what their card holds. The contract asks the registry first: it pays only while the
+    /// latest verdict is still Real, and a card whose verdict was corrected is burned instead, with what it held.
+    pub fn withdraw(&mut self, token_id: TokenId) -> Promise {
+        let Some(card) = self.cards.get(&token_id) else { env::panic_str(NO_CARD) };
+        require!(card.owner == env::predecessor_account_id(), "Only the holder can withdraw what their verified card holds");
+        require!(card.earned > 0, "This card holds nothing yet");
+        self.ask_registry(&token_id)
+            .then(Self::ext(env::current_account_id()).with_static_gas(GAS_FOR_PAYOUT).on_withdraw_checked(token_id))
+    }
+
+    /// The registry's answer to `withdraw`. Only this contract can call it. Answers what was paid out.
+    #[private]
+    pub fn on_withdraw_checked(
+        &mut self,
+        token_id: TokenId,
+        #[callback_result] record: Result<Option<Record>, PromiseError>,
+    ) -> PromiseOrValue<U128> {
+        let Ok(record) = record else { env::panic_str(NO_ANSWER) };
+        if !record.is_some_and(|r| r.latest.verdict == Verdict::Real) {
+            self.burn_corrected(&token_id);
+            return PromiseOrValue::Value(U128(0));
+        }
+        // the card can have been burned while the registry was being asked
+        let Some(card) = self.cards.get_mut(&token_id) else { return PromiseOrValue::Value(U128(0)) };
+        let amount = std::mem::take(&mut card.earned);
+        if amount == 0 {
+            return PromiseOrValue::Value(U128(0));
+        }
+        let holder = card.owner.clone();
+        PromiseOrValue::Promise(Promise::new(holder).transfer(NearToken::from_yoctonear(amount)).then(
+            Self::ext(env::current_account_id()).with_static_gas(GAS_FOR_SETTLING).on_paid_out(token_id, U128(amount)),
+        ))
+    }
+
+    /// Whether the payout arrived. Only this contract can call it. If it didn't (the holder's account is gone), the
+    /// money goes back into the card.
+    #[private]
+    pub fn on_paid_out(&mut self, token_id: TokenId, amount: U128, #[callback_result] sent: Result<(), PromiseError>) -> U128 {
+        if sent.is_ok() {
+            env::log_str(&format!("Paid out {} yoctoNEAR from verified card {token_id}", amount.0));
+            return amount;
+        }
+        match self.cards.get_mut(&token_id) {
+            Some(card) => card.earned += amount.0,
+            None => self.forfeited += amount.0,
+        }
+        U128(0)
     }
 
     /// The holder gives their verified card up. Needs 1 yoctoNEAR attached, so only a full-access key can do it.
@@ -147,6 +218,8 @@ impl TallyCard {
         assert_one_yocto();
         let holder = self.cards.get(&token_id).map(|card| card.owner.clone());
         require!(holder == Some(env::predecessor_account_id()), "Only the holder can burn their verified card");
+        // giving a card up loses whatever it still holds, so that can't happen by accident
+        require!(self.cards.get(&token_id).is_some_and(|card| card.earned == 0), "Withdraw what this card holds before giving it up");
         let owner = self.remove(&token_id).unwrap();
         NftBurn { owner_id: &owner, token_ids: &[&token_id], authorized_id: None, memo: Some("Burned by its holder") }.emit();
     }
@@ -158,6 +231,11 @@ impl TallyCard {
     pub fn registry(&self) -> AccountId {
         self.registry.clone()
     }
+
+    /// What burned cards held when they were burned, in yoctoNEAR. It is locked in this contract for good.
+    pub fn forfeited(&self) -> U128 {
+        U128(self.forfeited)
+    }
 }
 
 impl TallyCard {
@@ -165,9 +243,18 @@ impl TallyCard {
         proof_registry::ext(self.registry.clone()).with_static_gas(GAS_FOR_REGISTRY).get(fingerprint.to_string())
     }
 
-    /// Takes a verified card out of the contract and answers who held it.
+    /// Burns a card whose verdict is no longer Real. What it held is lost with it.
+    fn burn_corrected(&mut self, fingerprint: &str) {
+        if let Some(owner) = self.remove(fingerprint) {
+            let memo = Some("The proof registry no longer says this card is Real");
+            NftBurn { owner_id: &owner, token_ids: &[fingerprint], authorized_id: None, memo }.emit();
+        }
+    }
+
+    /// Takes a verified card out of the contract and answers who held it. Anything it still held is forfeited.
     fn remove(&mut self, fingerprint: &str) -> Option<AccountId> {
         let card = self.cards.remove(fingerprint)?;
+        self.forfeited += card.earned;
         let held = self.owned.get_mut(&card.owner).unwrap();
         held.remove(fingerprint);
         if held.is_empty() {
@@ -193,7 +280,7 @@ impl TallyCard {
                 copies: Some(1),
                 issued_at: Some(card.minted_at_ms.to_string()),
                 // check ids and account ids are plain letters, digits, - _ and dots, so this is always valid JSON
-                extra: Some(format!(r#"{{"check_id":"{}","registry":"{}"}}"#, card.check_id, self.registry)),
+                extra: Some(format!(r#"{{"check_id":"{}","registry":"{}","holds":"{}"}}"#, card.check_id, self.registry, card.earned)),
                 ..Default::default()
             }),
             approved_account_ids: None,
@@ -328,7 +415,7 @@ mod tests {
         let meta = token.metadata.clone().unwrap();
         assert_eq!(meta.title.as_deref(), Some("Tally verified card 9f86d081"));
         assert_eq!(meta.issued_at.as_deref(), Some("2000"), "the chain's own time");
-        assert_eq!(meta.extra.as_deref(), Some(r#"{"check_id":"k3x9q2","registry":"proof.tally.testnet"}"#));
+        assert_eq!(meta.extra.as_deref(), Some(r#"{"check_id":"k3x9q2","registry":"proof.tally.testnet","holds":"0"}"#));
         assert_eq!(meta.media, Some(format!("badge/{FP}.png")), "the picture link carries the fingerprint and nothing else");
         assert_eq!(c.nft_metadata().base_uri.as_deref(), Some(SITE), "and wallets join it to the site's address");
         assert_eq!(c.nft_token(FP.into()), Some(token.clone()));
@@ -494,6 +581,137 @@ mod tests {
         let mut c = fresh();
         minted(&mut c, FP, TRADER);
         as_account(TRADER, 3_000, 0);
+        c.burn(FP.into());
+    }
+
+    const DESK: &str = "check.tally.testnet";
+
+    /// Pays `fingerprint`'s card the way the paid check does, and answers what the card then holds.
+    fn paid(c: &mut TallyCard, fingerprint: &str, yocto: u128) -> u128 {
+        as_account(DESK, 3_000, yocto);
+        c.earn(fingerprint.into()).0
+    }
+
+    /// The holder asks for their money, and the contract receives the registry's answer.
+    fn withdrawn(c: &mut TallyCard, fingerprint: &str, answer: Result<Option<Record>, PromiseError>) -> PromiseOrValue<U128> {
+        as_account(TRADER, 4_000, 0);
+        let _ = c.withdraw(fingerprint.into());
+        as_account(CARD, 4_000, 0);
+        c.on_withdraw_checked(fingerprint.into(), answer)
+    }
+
+    fn holds(c: &TallyCard, fingerprint: &str) -> bool {
+        c.nft_token(fingerprint.into()).is_some()
+    }
+
+    fn held(c: &TallyCard, fingerprint: &str) -> String {
+        let extra = c.nft_token(fingerprint.into()).unwrap().metadata.unwrap().extra.unwrap();
+        extra.split(r#""holds":""#).nth(1).unwrap().trim_end_matches(r#""}"#).to_string()
+    }
+
+    #[test]
+    fn a_verified_card_holds_what_it_is_paid() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        assert_eq!(paid(&mut c, FP, 500), 500);
+        assert_eq!(paid(&mut c, FP, 250), 750, "a second payment adds to the first");
+        assert_eq!(held(&c, FP), "750", "and anyone can read it off the token");
+        assert_eq!(c.forfeited().0, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "There is no verified card for this fingerprint")]
+    fn only_a_verified_card_can_be_paid() {
+        let mut c = fresh();
+        paid(&mut c, FP, 500);
+    }
+
+    #[test]
+    #[should_panic(expected = "Attach the NEAR this card earns")]
+    fn paying_a_card_nothing_is_refused() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 0);
+    }
+
+    #[test]
+    fn the_holder_is_paid_out_while_the_registry_still_says_real() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 750);
+        assert!(matches!(withdrawn(&mut c, FP, says(Verdict::Real)), PromiseOrValue::Promise(_)), "a transfer to the holder");
+        assert_eq!(held(&c, FP), "0", "the card is emptied before the money leaves");
+        as_account(CARD, 4_000, 0);
+        assert_eq!(c.on_paid_out(FP.into(), U128(750), Ok(())).0, 750);
+        assert_eq!((holds(&c, FP), c.forfeited().0), (true, 0), "the card stands and nothing was lost");
+    }
+
+    #[test]
+    fn a_withdrawal_after_a_correction_burns_the_card_with_what_it_held() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 750);
+        assert!(matches!(withdrawn(&mut c, FP, says(Verdict::Fake)), PromiseOrValue::Value(U128(0))), "nothing is paid out");
+        assert!(get_logs().join("\n").contains(r#""event":"nft_burn""#));
+        assert_eq!((holds(&c, FP), c.forfeited().0), (false, 750), "the card is gone and its money is locked away");
+    }
+
+    #[test]
+    fn a_card_burned_on_a_recheck_loses_what_it_held() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 400);
+        as_account(CARD, 5_000, 0);
+        assert!(!c.on_rechecked(FP.into(), says(Verdict::Unclear)));
+        assert_eq!((holds(&c, FP), c.forfeited().0), (false, 400));
+    }
+
+    #[test]
+    #[should_panic(expected = "The proof registry didn't answer, so nothing was changed")]
+    fn a_withdrawal_that_gets_no_answer_pays_nothing() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 750);
+        let _ = withdrawn(&mut c, FP, Err(PromiseError::Failed));
+    }
+
+    #[test]
+    fn money_that_couldnt_be_delivered_goes_back_into_the_card() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 750);
+        let _ = withdrawn(&mut c, FP, says(Verdict::Real));
+        as_account(CARD, 4_000, 0);
+        assert_eq!(c.on_paid_out(FP.into(), U128(750), Err(PromiseError::Failed)).0, 0);
+        assert_eq!(held(&c, FP), "750");
+    }
+
+    #[test]
+    #[should_panic(expected = "Only the holder can withdraw what their verified card holds")]
+    fn nobody_else_can_withdraw_not_even_tally() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 750);
+        as_account(TALLY, 4_000, 0);
+        let _ = c.withdraw(FP.into());
+    }
+
+    #[test]
+    #[should_panic(expected = "This card holds nothing yet")]
+    fn theres_nothing_to_withdraw_from_a_card_that_was_never_paid() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        as_account(TRADER, 4_000, 0);
+        let _ = c.withdraw(FP.into());
+    }
+
+    #[test]
+    #[should_panic(expected = "Withdraw what this card holds before giving it up")]
+    fn a_card_that_holds_money_cant_be_given_up_by_accident() {
+        let mut c = fresh();
+        minted(&mut c, FP, TRADER);
+        paid(&mut c, FP, 750);
+        as_account(TRADER, 4_000, 1);
         c.burn(FP.into());
     }
 

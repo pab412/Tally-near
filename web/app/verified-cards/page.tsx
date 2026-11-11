@@ -53,16 +53,24 @@ export default function VerifiedCards() {
 
       <section className="split" aria-labelledby="earns">
         <h2 id="earns">
-          And it earns <Status state="build" />
+          And it holds money <Status state="soon" />
         </h2>
         <div className="split-cols">
           <div className="prose">
-            <p>When an AI agent pays to check a card, part of the fee goes to the trader who holds that card&apos;s verified card.</p>
-            <p>So a real trader is paid each time their record is checked, and has a reason to get every real card verified. A faker has no badge, so a faker earns nothing.</p>
+            <p>When an AI agent pays to check a card, part of the fee goes into that card&apos;s verified card. The badge itself holds the money.</p>
+            <p>A faker has no badge, so a faker earns nothing.</p>
+            <p>
+              <Link href="/agents">See how the paid check works.</Link>
+            </p>
           </div>
-          <p className="split-note">
-            This part isn&apos;t live yet. <Link href="/agents">See how the paid check will work.</Link>
-          </p>
+          <ul className="rules">
+            <li>
+              <strong>The trader takes it out while the card is Real.</strong> The contract asks the record on NEAR before it pays.
+            </li>
+            <li>
+              <strong>A badge that burns loses what it held.</strong> Nobody gets that money, Tally included: nothing in the contract can move it.
+            </li>
+          </ul>
         </div>
       </section>
 

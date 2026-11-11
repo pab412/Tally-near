@@ -52,10 +52,10 @@ const PAGES: readonly { id: PageId; href: string; label: string; short?: string 
 ];
 
 /** Where a part of this stands, said plainly next to it, so nothing reads as finished before it is. */
-export function Status({ state }: { state: "live" | "soon" | "build" }) {
+export function Status({ state }: { state: "live" | "soon" }) {
   return (
     <span className="status" data-state={state}>
-      {state === "live" ? "Live on testnet" : state === "soon" ? "Tested, going live" : "In build"}
+      {state === "live" ? "Live on testnet" : "Tested, going live"}
     </span>
   );
 }
@@ -108,18 +108,19 @@ export function Fingerprint({ fp }: { fp: string }) {
 }
 
 /** The foot of every page: where the contracts are. */
-export function Contracts({ contractId, cardContractId, children }: { contractId: string; cardContractId: string; children?: ReactNode }) {
+export function Contracts({ ids, children }: { ids: readonly string[]; children?: ReactNode }) {
   return (
     <footer className="foot">
       <p>
         Contracts:{" "}
-        <a href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-          {contractId} <ExternalIcon />
-        </a>{" "}
-        and{" "}
-        <a href={explorerAccountUrl(cardContractId)} target="_blank" rel="noreferrer">
-          {cardContractId} <ExternalIcon />
-        </a>{" "}
+        {ids.map((id, i) => (
+          <span key={id}>
+            {i > 0 && (i === ids.length - 1 ? " and " : ", ")}
+            <a href={explorerAccountUrl(id)} target="_blank" rel="noreferrer">
+              {id} <ExternalIcon />
+            </a>
+          </span>
+        ))}{" "}
         on NEAR testnet. Everything marked SAMPLE or Example is made up.
       </p>
       {children}

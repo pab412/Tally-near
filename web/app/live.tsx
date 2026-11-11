@@ -4,8 +4,10 @@
 // verdict is whatever the contracts answer when the page is open, and says so when they can't be reached.
 
 import { useEffect, useState } from "react";
-import { liveCounts, lookup, verdictSentence, viewCall, type Lookup, type ProofRecord } from "@/lib/near";
-import { Busy, Finding, Note, RecordFacts } from "./parts";
+import { checkTerms, explorerAccountUrl, liveCounts, lookup, verdictSentence, viewCall, type CheckTerms, type Lookup, type ProofRecord } from "@/lib/near";
+import { inNear } from "@/scripts/agent-rule.mjs";
+import { ExternalIcon } from "./icons";
+import { Busy, Fact, Finding, Note, RecordFacts } from "./parts";
 
 /** A real record, read from the proof registry: the sections of a frame. */
 export function LiveRecord({ fp, contractId }: { fp: string; contractId: string }) {
@@ -62,6 +64,41 @@ export function LiveAnswer({ fp, contractId }: { fp: string; contractId: string 
     <pre className="code" aria-live="polite">
       <code>{answer ?? "Asking NEAR…"}</code>
     </pre>
+  );
+}
+
+/** What a paid check costs right now, read from the paid check contract: the sections of a frame. */
+export function LiveTerms({ contractId }: { contractId: string }) {
+  const [state, setState] = useState<CheckTerms | "asking" | "unreachable">("asking");
+  useEffect(() => {
+    let live = true;
+    checkTerms({ contractId }).then(
+      (terms) => live && setState(terms),
+      () => live && setState("unreachable"),
+    );
+    return () => {
+      live = false;
+    };
+  }, [contractId]);
+
+  if (state === "asking") return <Busy>Reading from NEAR…</Busy>;
+  if (state === "unreachable")
+    return (
+      <Note role="status">
+        <p>The paid check isn&apos;t answering at {contractId} yet. It is tested and waiting to go live there.</p>
+      </Note>
+    );
+  return (
+    <dl className="facts">
+      <Fact label="One check">{inNear(state.fee)} NEAR</Fact>
+      <Fact label="To the trader">{state.trader_percent}% of it, into their verified card</Fact>
+      <Fact label="Answered so far">{state.checks.toLocaleString("en-US")}</Fact>
+      <Fact label="Contract">
+        <a href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
+          {contractId} <ExternalIcon />
+        </a>
+      </Fact>
+    </dl>
   );
 }
 

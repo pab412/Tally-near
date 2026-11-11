@@ -47,13 +47,27 @@ export default function Questions() {
         <details>
           <summary>How does a trader earn from a verified card?</summary>
           <p>
-            When an AI agent pays to check a card, part of the fee goes to the trader holding that card&apos;s verified card. This part is being
-            built and isn&apos;t live yet. <Link href="/agents">See For AI agents.</Link>
+            When an AI agent pays to check a card, part of the fee goes into that card&apos;s verified card. The trader can take it out while the
+            card is still Real. If the card is found fake, the badge burns and what it held is lost. <Link href="/agents">See For AI agents.</Link>
           </p>
         </details>
         <details>
           <summary>Does it cost anything to look a card up?</summary>
-          <p>No. Reading a record is free for people and for AI agents. The paid check, which shares its fee with the trader, is a separate call that is still being built.</p>
+          <p>No. Reading a record is free for people and for AI agents.</p>
+        </details>
+        <details>
+          <summary>Why would an agent pay when reading is free?</summary>
+          <p>
+            For the receipt. A paid check leaves a public record on NEAR that this agent checked this card before it acted, which its owner can
+            audit. The fee also pays the trader, and a paid check is what gets a badge burned once its verdict was corrected.
+          </p>
+        </details>
+        <details>
+          <summary>What stops an AI agent from overspending?</summary>
+          <p>
+            Its owner loads a small credit and gives it a key that can only pay for checks. NEAR refuses anything else that key tries, and the
+            contract refuses a check once the credit is gone.
+          </p>
         </details>
         <details>
           <summary>Is this on NEAR mainnet?</summary>
@@ -62,7 +76,7 @@ export default function Questions() {
         <details>
           <summary>What was built for the hackathon?</summary>
           <p>
-            Everything on NEAR: both contracts and this site. Tally itself (reading cards and checking them) existed before and isn&apos;t part of the
+            Everything on NEAR: the three contracts and this site. Tally itself (reading cards and checking them) existed before and isn&apos;t part of the
             entry.
           </p>
         </details>

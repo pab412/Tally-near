@@ -8,7 +8,7 @@ import { sampleFingerprints, samplePicture } from "@/lib/sample";
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const AT = Date.UTC(2026, 10, 10, 22, 4);
 
-const card: VerifiedCard = { fingerprint: FP, holder: "trader.testnet", mintedAtMs: AT + 5_000, checkId: "k3x9q2" };
+const card: VerifiedCard = { fingerprint: FP, holder: "trader.testnet", mintedAtMs: AT + 5_000, checkId: "k3x9q2", holdsYocto: "0" };
 const says = (verdict: Verdict): ProofRecord => ({ fingerprint: FP, latest: { verdict, check_id: "k3x9q2", recorded_at_ms: AT }, entries: 1 });
 
 /** The two contracts as the picture link reads them: what the card contract holds, and what the registry says. */

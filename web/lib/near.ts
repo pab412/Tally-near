@@ -27,6 +27,20 @@ export interface VerifiedCard {
   mintedAtMs: number;
   /** The check it came from. */
   checkId: string;
+  /** What the card holds, in yoctoNEAR: its share of the fees agents paid to check it. */
+  holdsYocto: string;
+}
+
+/** What a paid check costs and where it looks, as the paid check contract states it (contracts/check `terms`). */
+export interface CheckTerms {
+  /** One answered check, in yoctoNEAR. */
+  fee: string;
+  /** The share of the fee paid into the card's verified card. */
+  trader_percent: number;
+  registry: string;
+  cards: string;
+  /** How many checks have been answered and charged. */
+  checks: number;
 }
 
 /** A token as the card contract's standard NFT views return it. */
@@ -38,6 +52,7 @@ export interface NftToken {
 
 export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "proof.notpab.testnet";
 export const CARD_CONTRACT_ID = process.env.NEXT_PUBLIC_CARD_CONTRACT_ID || "card.notpab.testnet";
+export const CHECK_CONTRACT_ID = process.env.NEXT_PUBLIC_CHECK_CONTRACT_ID || "check.notpab.testnet";
 export const RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC || "https://rpc.testnet.fastnear.com";
 
 const EXPLORER = "https://testnet.nearblocks.io";
@@ -111,13 +126,20 @@ export async function lookup(fingerprint: string, opts: NearOptions = {}): Promi
 }
 
 export function toVerifiedCard(token: NftToken): VerifiedCard {
-  let checkId = "";
+  let extra: { check_id?: unknown; holds?: unknown } = {};
   try {
-    checkId = String(JSON.parse(token.metadata?.extra ?? "{}").check_id ?? "");
+    extra = JSON.parse(token.metadata?.extra ?? "{}") ?? {};
   } catch {
     // a token whose extra isn't JSON still has a holder and a date
   }
-  return { fingerprint: token.token_id, holder: token.owner_id, mintedAtMs: Number(token.metadata?.issued_at ?? 0), checkId };
+  const holds = String(extra.holds ?? "0");
+  return {
+    fingerprint: token.token_id,
+    holder: token.owner_id,
+    mintedAtMs: Number(token.metadata?.issued_at ?? 0),
+    checkId: String(extra.check_id ?? ""),
+    holdsYocto: /^\d+$/.test(holds) ? holds : "0",
+  };
 }
 
 /** The verified card for a fingerprint, or null when it has none. `contractId` here is the card contract. */
@@ -125,6 +147,11 @@ export async function verifiedCard(fingerprint: string, opts: NearOptions = {}):
   if (!isFingerprint(fingerprint)) throw new LookupError("That isn't a card fingerprint.");
   const token = await viewCall<NftToken | null>("nft_token", { token_id: fingerprint }, { ...opts, contractId: opts.contractId ?? CARD_CONTRACT_ID });
   return token && toVerifiedCard(token);
+}
+
+/** What a paid check costs right now, read from the paid check contract. `contractId` here is that contract. */
+export function checkTerms(opts: NearOptions = {}): Promise<CheckTerms> {
+  return viewCall<CheckTerms>("terms", {}, { ...opts, contractId: opts.contractId ?? CHECK_CONTRACT_ID });
 }
 
 const TESTNET_ACCOUNT_RE = /^(?=.{9,64}$)(?:[a-z\d]+(?:[-_][a-z\d]+)*\.)+testnet$/;

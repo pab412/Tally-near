@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { CARD_CONTRACT_ID, CONTRACT_ID } from "@/lib/near";
+import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID } from "@/lib/near";
 import { ExternalIcon } from "./icons";
 import { Contracts, SiteHeader, type PageId } from "./parts";
 
@@ -14,7 +14,7 @@ export function DocPage({ current, children }: { current: PageId; children: Reac
     <div className="shell">
       <SiteHeader current={current} />
       <main className="doc">{children}</main>
-      <Contracts contractId={CONTRACT_ID} cardContractId={CARD_CONTRACT_ID}>
+      <Contracts ids={[CONTRACT_ID, CARD_CONTRACT_ID, CHECK_CONTRACT_ID]}>
         <p>
           Built for the NEAR Hackathon, November 2026.{" "}
           <a href={REPO} target="_blank" rel="noreferrer">

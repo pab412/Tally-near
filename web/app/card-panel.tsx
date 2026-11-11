@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CardOutcome } from "@/lib/card";
 import { badgePath } from "@/lib/fingerprint";
 import { explorerAccountUrl, explorerTxUrl, formatDay, isTestnetAccount, shortFingerprint } from "@/lib/near";
+import { inNear } from "@/scripts/agent-rule.mjs";
 import { AlertIcon, ExternalIcon, SealIcon } from "./icons";
 import { Busy, Fact, Finding, Frame, Note, SwitchedOff, send, type Card, type LookState } from "./parts";
 
@@ -103,6 +104,9 @@ export function CardPanel({
                 </div>
               )}
               <dl className="facts">
+                <Fact label="Holds">
+                  {inNear(held.holdsYocto)} NEAR <span className="muted">from paid checks, the holder&apos;s to withdraw while the card is Real</span>
+                </Fact>
                 <Fact label="From check" mono>
                   {held.checkId}
                 </Fact>

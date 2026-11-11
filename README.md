@@ -1,12 +1,14 @@
 # Tally on NEAR
 
-A permanent, public record of every PnL card Tally checks, and a verified card that only exists while that record says the card is real. Built for the NEAR Hackathon (November 2026).
+A permanent, public record of every PnL card Tally checks, a verified card that only exists while that record says the card is real, and a paid check that lets an AI agent ask before it trusts a trader, on a spending limit its owner set. Built for the NEAR Hackathon (November 2026).
 
 **The problem.** In crypto, anyone can post a screenshot of a 100x. [Tally](https://tallypnl.com) checks those PnL cards for fakes. Until now, a verdict lived in Tally's own database, so you had to trust Tally not to change it.
 
 **What NEAR adds.** Each check is written to a smart contract on NEAR: the card's fingerprint, the verdict and the time. Nobody can delete or rewrite a record, including Tally. A corrected verdict is added on top, and the earlier ones stay visible. Anyone, a person or an AI agent, can look a card up without asking Tally.
 
 A card Tally found real can also become a **verified card**: an NFT the trader holds. It can't be sold or moved, the contract only mints it after asking the registry itself, and it is burned if the verdict is ever corrected.
+
+An AI agent can pay for a check with the **paid check** contract. Its owner loads a little credit and gives the agent a key that can only pay for checks, so that credit is all it can ever spend. Part of each fee goes into the trader's verified card: the NFT itself holds the money, pays it out only while the card is still Real, and loses it if it is burned.
 
 ## What existed before, and what's new
 
@@ -18,12 +20,13 @@ A card Tally found real can also become a **verified card**: an NFT the trader h
 | Part | Where | State |
 |---|---|---|
 | Proof registry contract | `contracts/proof` | 7 unit tests pass. Live on testnet at [`proof.notpab.testnet`](https://testnet.nearblocks.io/address/proof.notpab.testnet) (attester: `notpab.testnet`). |
-| Verified card contract (NFT) | `contracts/card` | 19 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). Each token links to its picture. Not yet deployed at `card.notpab.testnet`. |
-| Shared types | `contracts/types` | What both contracts agree on: a fingerprint, the verdicts, a record. 2 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 42 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
-| Paid check for AI agents | not started | Planned: an agent pays a small fee to check a card, and part of it goes to the trader holding that card's verified card. Nothing of it is in the repository yet; the site marks it "In build". |
+| Verified card contract (NFT) | `contracts/card` | 30 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). Each token links to its picture and can hold money. Not yet deployed at `card.notpab.testnet`. |
+| Paid check contract | `contracts/check` | 21 unit tests pass, and the whole flow passes on testnet in the same run, with an agent whose key can only pay for checks. Not yet deployed at `check.notpab.testnet`. |
+| Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
+| Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, and how the paid check talks to the card contract. 3 unit tests pass. |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 46 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
-Each part's state is also shown on the site next to it (Live on testnet, Tested and going live, In build).
+Each part's state is also shown on the site next to it: "Live on testnet", or "Tested, going live" for a contract that passes its tests and the testnet run but isn't deployed at its `notpab.testnet` address yet.
 
 ## The proof registry
 
@@ -60,6 +63,8 @@ Also:
 - Mints and burns log the standard NEP-171 events.
 - **It has a picture: the card itself with a "Verified on NEAR" stamp.** Every token's `media` is `badge/<fingerprint>.png`, and `nft_metadata` gives the site's address as `base_uri` (the `pictures` argument of `new`), so a wallet or explorer joins the two. The site draws the picture on request (`web/app/badge/[file]/route.tsx`) and only while the card contract still holds the card and the registry's latest verdict is still Real. For any other card the link answers 404, so a corrected card stops showing "Verified" even before anyone asks for the burn.
 
+- **It holds money.** Anyone can pay a verified card with `earn(fingerprint)`; the paid check sends a share of each fee there. The money belongs to the card, not to an account. `withdraw(token_id)` is holder-only, and the contract asks the registry first: it pays out only while the latest verdict is still Real, and burns the card instead if it isn't. A card that is burned because its verdict was corrected loses what it held, and that money stays locked in the contract: no function can move it, so Tally gains nothing by burning a card (`forfeited()` shows the total). A holder can't give up a card that still holds money by accident: `burn` refuses until it is withdrawn. What a card holds is in its token's `extra`, as `holds` (yoctoNEAR).
+
 The site keeps no picture a visitor picks. Today it has pictures only of its own sample cards (`web/public/samples`, found by fingerprint); for any other card the badge shows the fingerprint in the card's place. Pictures of real Tally cards will come from Tally itself once Tally sends its checks to NEAR, which is not built yet.
 
 What is stored: the fingerprint, the NEAR account the trader chose to hold it, and the id of the check it came from. Never a name, a handle from another site or the picture. The picture link carries nothing but the fingerprint.
@@ -71,13 +76,13 @@ cd contracts/card
 cargo test
 ```
 
-You should see `19 passed`. `contracts/types` has 2 more (`cd contracts/types && cargo test`).
+You should see `30 passed`. `contracts/check` has 21 and `contracts/types` has 3 (`cargo test` in each folder).
 
-Unit tests can't make one contract call another, so the whole flow is also tested on testnet. `web/scripts/e2e-contracts.mjs` deploys both contracts under a testnet account you give it, then checks 20 things for real: a Real card mints after the registry is asked and links to its picture, a Fake or unchecked one is refused, nobody can fake the registry's answer, a transfer is refused, and a corrected verdict burns the card. It needs both `.wasm` files built (below) and a testnet account with about 5 NEAR:
+Unit tests can't make one contract call another, so the whole flow is also tested on testnet. `web/scripts/e2e-contracts.mjs` deploys the three contracts under a testnet account you give it, then checks 43 things for real. For the card: a Real card mints after the registry is asked and links to its picture, a Fake or unchecked one is refused, nobody can fake the registry's answer, a transfer is refused, and a corrected verdict burns the card. For the paid check: an agent with no credit gets no answer, a check of a Real card costs one fee and half of it lands inside the verified card, a card with no record costs nothing, the agent's key can't send NEAR or call anything else, the holder withdraws, and after a correction the next paid check has the card burned with what it held. It needs the three `.wasm` files built (below) and a testnet account with about 8 NEAR:
 
 ```
 cd web
-node scripts/e2e-contracts.mjs <account.json> ../contracts/proof/target/near/tally_proof.wasm ../contracts/card/target/near/tally_card.wasm
+node scripts/e2e-contracts.mjs <account.json> ../contracts/proof/target/near/tally_proof.wasm ../contracts/card/target/near/tally_card.wasm ../contracts/check/target/near/tally_check.wasm
 ```
 
 `<account.json>` is `{"id":"<you>.testnet","pub":"ed25519:...","key":"ed25519:..."}` for a throwaway testnet account. Never use a real key.
@@ -98,10 +103,51 @@ The card contract is built the same way in `contracts/card` and deployed to its 
 near contract deploy card.notpab.testnet use-file target/near/tally_card.wasm with-init-call new json-args '{"attester":"notpab.testnet","registry":"proof.notpab.testnet","pictures":"https://tally-near.vercel.app"}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
 ```
 
+The paid check is built the same way in `contracts/check`, and its account needs about 2 NEAR. Its `new` takes who collects the contract's share, the registry, the card contract, the fee in yoctoNEAR (here 0.01 NEAR) and the trader's share in percent:
+
+```
+near contract deploy check.notpab.testnet use-file target/near/tally_check.wasm with-init-call new json-args '{"owner":"notpab.testnet","registry":"proof.notpab.testnet","cards":"card.notpab.testnet","fee":"10000000000000000000000","trader_percent":50}' prepaid-gas '100 Tgas' attached-deposit '0 NEAR' network-config testnet sign-with-legacy-keychain send
+```
+
 On Windows:
 - Set the user environment variable `AWS_LC_SYS_PREBUILT_NASM=1`, or the tests fail to compile ("NASM command not found").
 - Keep `--no-abi`, because cargo-near's ABI step doesn't link on Windows.
 - If you installed cargo-near with npm, copy `cargo-near.exe` from npm's `node_modules\cargo-near\node_modules\.bin_real` into `%USERPROFILE%\.cargo\bin` so that `cargo near` finds it.
+
+## The paid check
+
+`contracts/check` (Rust, near-sdk 5). An AI agent that follows calls or copies trades asks it whether a card is real, and pays a small fee for the answer.
+
+- **The agent has a spending limit.** Its owner calls `deposit(account_id)` with some NEAR attached: that is the agent's credit. The agent works with a NEAR function-call key that can only call `check` on this contract. NEAR itself refuses anything else that key tries (a transfer, another method, another contract), and the contract refuses a check once the credit is used up. So the most the agent can ever spend is the credit that was loaded, plus the gas allowance on its key. `refund()` sends unspent credit back to the account.
+- **`check(fingerprint)`** asks the proof registry and the card contract on-chain, in the same call, and answers with the card's record exactly as the registry gives it, who holds its verified card, what was charged and what went to the trader.
+- **No answer, no charge.** The fee is taken only when there is a record to give. A card Tally has never checked costs nothing, and neither does a check the registry couldn't answer.
+- **The trader earns.** When the card is Real and has a verified card, `trader_percent` of the fee is paid into that verified card (`earn` on the card contract). The rest is the contract's own share, which only its owner can `collect()`; credit that accounts loaded is never part of it.
+- **A corrected card is caught.** When a card still has a verified card but the registry no longer says Real, the paid check calls `recheck` on the card contract, which burns the card with whatever it held.
+- Each charged check logs an event (`tally_check`, `checked`) with the agent, the fingerprint, the verdict and the amounts.
+- Views: `terms()` (the fee, the trader's share, the two contracts it asks, how many checks it has answered), `credit_of(account_id)`, `takings()`.
+
+Reading a record straight from the registry is free and stays free. An agent pays when it wants the receipt: the `checked` event is a public record on NEAR that this agent looked this card up before it acted, which its owner can audit. The fee also pays the trader, and a paid check is what gets a corrected card burned without anyone having to notice it.
+
+What is stored: each account's credit and the contract's own share. Never a name or a handle.
+
+### Run the demo agent
+
+```
+cd web
+npm install
+node scripts/demo-agent.mjs
+```
+
+It needs `check.notpab.testnet` to be deployed (see the table above); until then, point it at any deployed paid check with `CHECK_CONTRACT=<account>`. It makes its own throwaway testnet account with NEAR's testnet faucet (or uses yours: `AGENT_ACCOUNT=<account.json>`), then prints each step:
+
+1. The owner loads credit for two checks.
+2. The agent gets a key that can only call `check`.
+3. The agent pays for a check of each card and decides: copy the trader only if NEAR says the card is Real. Each line links to the transaction.
+4. The agent tries to send the owner's NEAR to another account, and NEAR refuses.
+5. What the Real card's verified card now holds.
+6. The owner removes the agent's key and takes back unspent credit.
+
+It is a script with one rule (`web/scripts/agent-rule.mjs`), not an AI. What it demonstrates is the money side: the limit, the limited key, the fee and the trader's share.
 
 ## The demo page
 
@@ -109,8 +155,8 @@ On Windows:
 
 - **The front page** (`/`): what this is in one screen, and the way on to each part.
 - **How it works** (`/how-it-works`): three steps beside the real parts they describe: a card and its fingerprint, a card's history, and a record read live from NEAR. Then what goes on NEAR and what never does.
-- **Verified cards** (`/verified-cards`): the NFT's three rules, how a card gets one, and what the contract answers, word for word, when someone tries something it doesn't allow.
-- **For AI agents** (`/agents`): the call that reads a record (free, live, and printed by the same code the site uses), with NEAR's answer read as the page opens. It also describes the paid check that shares its fee with the trader, marked **In build**: that part is not written yet.
+- **Verified cards** (`/verified-cards`): the NFT's three rules, its picture, how it holds money, how a card gets one, and what the contract answers, word for word, when someone tries something it doesn't allow.
+- **For AI agents** (`/agents`): the call that reads a record (free, live, and printed by the same code the site uses), with NEAR's answer read as the page opens. Then the paid check: how it works, what it costs (read live from the contract once it is deployed), how to run the demo agent, and what the agent's key can and can't do.
 - **Questions** (`/faq`): short answers.
 
 The demo itself is at `/demo`, with three tabs:
@@ -118,7 +164,7 @@ The demo itself is at `/demo`, with three tabs:
 - **Look up a card.** Drop a PnL card picture on the page. Its fingerprint is computed in your browser (the picture is never uploaded), and the page asks the NEAR contract for that fingerprint. You see **Real**, **Unclear** or **Fake** with the date NEAR recorded it, the full history if a verdict was corrected, and a link to the explorer. A card with no record says "Tally hasn't checked this card yet."
 - **Open a record from a link.** `/demo?fp=<fingerprint>` opens that card's record straight away, with no picture needed. The address bar becomes that link whenever you look a card up, and **Copy the link to this record** copies it. This is what a QR code on a Tally card points to: scan it and you see what NEAR holds for that card.
 - **Record a check** (demo only). Pick a verdict and press Record. A server route signs the `record` call with a limited key that can do nothing else.
-- **Verified card.** Shows whether the card has a verified card, who holds it, and the picture wallets show for it. With the demo password you can mint one or ask for a recheck, and watch the contract decide: it refuses a card that isn't Real ("The contract refused", in the contract's own words), and it burns a card whose verdict was corrected.
+- **Verified card.** Shows whether the card has a verified card, who holds it, what it holds, and the picture wallets show for it. With the demo password you can mint one or ask for a recheck, and watch the contract decide: it refuses a card that isn't Real ("The contract refused", in the contract's own words), and it burns a card whose verdict was corrected.
 
 Every card on the page is made up and marked SAMPLE.
 
@@ -142,7 +188,7 @@ cd web
 npm test
 ```
 
-You should see `42 passed`.
+You should see `46 passed`.
 
 ### Try recording yourself
 

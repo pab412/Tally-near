@@ -64,9 +64,9 @@ export default function Home() {
             <Link href="/verified-cards">Verified cards</Link>
           </li>
           <li>
-            <Status state="build" />
+            <Status state="soon" />
             <h2>AI agents pay to check</h2>
-            <p>Before an AI agent trusts a trader, it pays a small fee to check their card on NEAR. Part of the fee goes to the trader.</p>
+            <p>Before an AI agent trusts a trader, it pays a small fee to check their card on NEAR. Part of the fee goes into the trader&apos;s badge.</p>
             <Link href="/agents">For AI agents</Link>
           </li>
         </ul>
