@@ -17,14 +17,10 @@ import {
   type Verdict,
 } from "@/lib/near";
 import { CardPanel } from "./card-panel";
+import { useRecordLink } from "./copy-link";
 import { ExternalIcon, UploadIcon } from "./icons";
-import { Busy, Contracts, Fact, Finding, Fingerprint, Frame, History, Note, RecordFacts, SiteHeader, SwitchedOff, send, type Card, type LookState } from "./parts";
+import { Busy, Contracts, Fact, Finding, Fingerprint, Frame, History, Note, RecordFacts, SAMPLES, SiteHeader, SwitchedOff, send, type Card, type LookState } from "./parts";
 
-const SAMPLES = [
-  { file: "sample-card-a.png", label: "Sample A", hint: "Corrected once" },
-  { file: "sample-card-b.png", label: "Sample B", hint: "Checked" },
-  { file: "sample-card-c.png", label: "Sample C", hint: "Never checked" },
-];
 const MAX_BYTES = 20 * 1024 * 1024;
 
 type Tab = "lookup" | "record" | "card";
@@ -266,16 +262,10 @@ export default function TallyDemo({
 
 /** Copies the link that opens this card's record: what a Tally card's QR code would hold. */
 function CopyLink({ fp }: { fp: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, copy] = useRecordLink(fp);
   return (
     <p className="frame-foot">
-      <button
-        type="button"
-        className="btn-secondary"
-        onClick={() => {
-          void navigator.clipboard.writeText(window.location.origin + recordPath(fp)).then(() => setCopied(true));
-        }}
-      >
+      <button type="button" className="btn-secondary" onClick={copy}>
         {copied ? "Link copied" : "Copy the link to this record"}
       </button>
       <span className="muted" aria-live="polite">

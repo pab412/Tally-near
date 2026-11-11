@@ -1,10 +1,11 @@
 "use client";
 
-// The site's two live readings from NEAR. Nothing here is written into the page ahead of time: each number and
-// verdict is whatever the contracts answer when the page is open, and says so when they can't be reached.
+// The pages' small live readings from NEAR (the front page's ledger is in ledger.tsx). Nothing here is written into
+// the page ahead of time: each number and verdict is whatever the contracts answer when the page is open, and says so
+// when they can't be reached.
 
-import { useEffect, useState } from "react";
-import { checkTerms, explorerAccountUrl, liveCounts, lookup, verdictSentence, viewCall, type CheckTerms, type Lookup, type ProofRecord } from "@/lib/near";
+import { useEffect, useState, type ReactNode } from "react";
+import { checkTerms, explorerAccountUrl, lookup, verdictSentence, viewCall, type CheckTerms, type Lookup, type ProofRecord } from "@/lib/near";
 import { inNear } from "@/scripts/agent-rule.mjs";
 import { ExternalIcon } from "./icons";
 import { Busy, Fact, Finding, Note, RecordFacts } from "./parts";
@@ -89,42 +90,24 @@ export function LiveTerms({ contractId }: { contractId: string }) {
       </Note>
     );
   return (
-    <dl className="facts">
-      <Fact label="One check">{inNear(state.fee)} NEAR</Fact>
-      <Fact label="To the trader">{state.trader_percent}% of it, into their verified card</Fact>
-      <Fact label="Answered so far">{state.checks.toLocaleString("en-US")}</Fact>
+    <TermsFacts terms={state}>
       <Fact label="Contract">
         <a href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
           {contractId} <ExternalIcon />
         </a>
       </Fact>
-    </dl>
+    </TermsFacts>
   );
 }
 
-/** How many cards are on record and how many verified cards exist, right now. Shown once there are a few to count. */
-export function LiveCounts({ contractId, cardContractId, min = 3 }: { contractId: string; cardContractId: string; min?: number }) {
-  const [counts, setCounts] = useState<{ cards: number | null; verified: number | null } | null>(null);
-  useEffect(() => {
-    let live = true;
-    void liveCounts({ contractId, cardContractId }).then((c) => live && setCounts(c));
-    return () => {
-      live = false;
-    };
-  }, [contractId, cardContractId]);
-
-  // a count is shown only once its contract has answered; one that can't be read is left out, never guessed
-  const shown = (["cards", "verified"] as const).filter((key) => counts?.[key] != null);
-  if (!shown.length || (counts?.cards ?? 0) < min) return null;
+/** What a paid check costs and how many were answered, as a table. Rows passed in are added at the end. */
+export function TermsFacts({ terms, children }: { terms: CheckTerms; children?: ReactNode }) {
   return (
-    <dl className="counts" aria-label="On NEAR right now">
-      {shown.map((key) => (
-        <div key={key}>
-          <dt>{key === "cards" ? "Cards on record" : "Verified cards"}</dt>
-          <dd>{counts![key]!.toLocaleString("en-US")}</dd>
-        </div>
-      ))}
-      <p className="muted">Read from NEAR testnet as this page opened.</p>
+    <dl className="facts">
+      <Fact label="One check">{inNear(terms.fee)} NEAR</Fact>
+      <Fact label="To the trader">{terms.trader_percent}% of it, into their verified card</Fact>
+      <Fact label="Answered so far">{terms.checks.toLocaleString("en-US")}</Fact>
+      {children}
     </dl>
   );
 }

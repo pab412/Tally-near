@@ -216,7 +216,7 @@ It is a script with one rule (`web/scripts/agent-rule.mjs`), not an AI. What it 
 
 `web` (Next.js). It looks like [tallypnl.com](https://tallypnl.com) because it is meant to be part of it.
 
-- **The front page** (`/`): what this is in one screen, and the way on to each part.
+- **The front page** (`/`): what this is in one screen, and the way on to each part. Under that, a ledger of what the three contracts hold right now, read from NEAR as the page opens: the cards on record (open one to see its whole history, or find one by its fingerprint), the verified cards, and what a paid check costs. The registry answers by fingerprint and keeps no list, so the ledger shows the cards this site can name (its samples and every card with a verified card) and says so when the registry holds more.
 - **How it works** (`/how-it-works`): three steps beside the real parts they describe: a card and its fingerprint, a card's history, and a record read live from NEAR. Then what goes on NEAR and what never does.
 - **Verified cards** (`/verified-cards`): the NFT's three rules, its picture, how it holds money, how a card gets one, and what the contract answers, word for word, when someone tries something it doesn't allow.
 - **For AI agents** (`/agents`): the call that reads a record (free, live, and printed by the same code the site uses), with NEAR's answer read as the page opens. Then the paid check: how it works, what it costs (read live from the contract once it is deployed), how to run the demo agent, and what the agent's key can and can't do.

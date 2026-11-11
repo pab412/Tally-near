@@ -18,6 +18,13 @@ export const UploadIcon = () => (
   </svg>
 );
 
+export const SearchIcon = () => (
+  <svg {...base} width={16} height={16}>
+    <circle cx="9" cy="9" r="5.25" />
+    <path d="m13 13 3.5 3.5" />
+  </svg>
+);
+
 export const ExternalIcon = () => (
   <svg {...base} width={16} height={16}>
     <path d="M8.5 4.5h-4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4M11.5 3.5h5v5M16.5 3.5 9 11" />

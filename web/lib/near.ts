@@ -164,15 +164,6 @@ export function isTestnetAccount(value: unknown): value is string {
 /** A fingerprint that has a record on proof.notpab.testnet: the README and the front page open it as a real example. */
 export const DEMO_RECORD_FP = "cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8";
 
-/** How many cards have a record, and how many verified cards exist. Each is null when its contract couldn't be read. */
-export async function liveCounts(opts: NearOptions & { cardContractId?: string } = {}): Promise<{ cards: number | null; verified: number | null }> {
-  const [cards, verified] = await Promise.all([
-    viewCall<number>("cards", {}, opts).catch(() => null),
-    viewCall<string>("nft_total_supply", {}, { ...opts, contractId: opts.cardContractId ?? CARD_CONTRACT_ID }).catch(() => null),
-  ]);
-  return { cards, verified: verified === null ? null : Number(verified) };
-}
-
 /** A fingerprint's first and last eight characters, for a table row: the whole one is shown where there's room. */
 export const shortFingerprint = (fp: string) => `${fp.slice(0, 8)}…${fp.slice(-8)}`;
 

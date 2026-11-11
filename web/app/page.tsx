@@ -2,15 +2,25 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { DEMO_PATH } from "@/lib/fingerprint";
-import { CARD_CONTRACT_ID, CONTRACT_ID } from "@/lib/near";
+import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, DEMO_RECORD_FP } from "@/lib/near";
+import { sampleFingerprints } from "@/lib/sample";
 import { DocPage, REPO } from "./doc-parts";
 import { ExternalIcon } from "./icons";
-import { LiveCounts } from "./live";
-import { Status } from "./parts";
+import { Ledger, type KnownCard } from "./ledger";
+import { SAMPLES, Status } from "./parts";
 
 // The front page (the owner, 2026-11-10: the panther page is what people should see first, and "I dont like how
 // everything is on the same page"): the headline, the three things this is, and the way on to each. The detail
-// lives on its own pages.
+// lives on its own pages. Under the three sits the ledger (the owner, 2026-11-11, of the ledger mock-up: "add this
+// part to the main webpage underneath"): what the contracts hold right now, read from NEAR as the page opens.
+
+// The cards the ledger can ask NEAR about by name: the registry keeps no list, so the site names the ones it knows.
+// These are its own made-up samples, their fingerprints computed from the real files, and the README's example record.
+const KNOWN: KnownCard[] = [
+  ...SAMPLES.map(({ file, label }) => ({ fingerprint: sampleFingerprints(file).fingerprint, label, image: `/samples/${file}` })),
+  { fingerprint: DEMO_RECORD_FP, label: "Demo record" },
+];
+
 export const metadata: Metadata = {
   title: "Tally on NEAR: receipts nobody can edit",
   description:
@@ -72,7 +82,7 @@ export default function Home() {
         </ul>
       </section>
 
-      <LiveCounts contractId={CONTRACT_ID} cardContractId={CARD_CONTRACT_ID} />
+      <Ledger contractId={CONTRACT_ID} cardContractId={CARD_CONTRACT_ID} checkContractId={CHECK_CONTRACT_ID} known={KNOWN} />
     </DocPage>
   );
 }

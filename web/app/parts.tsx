@@ -30,6 +30,13 @@ export type LookState =
 
 export const README = "https://github.com/pab412/Tally-near#try-recording-yourself";
 
+/** The site's own made-up cards (public/samples), and what each one shows. */
+export const SAMPLES = [
+  { file: "sample-card-a.png", label: "Sample A", hint: "Corrected once" },
+  { file: "sample-card-b.png", label: "Sample B", hint: "Checked" },
+  { file: "sample-card-c.png", label: "Sample C", hint: "Never checked" },
+];
+
 /** The site's name, top left on every page; it links to the front page. */
 export function Wordmark() {
   return (
@@ -94,12 +101,19 @@ export function Fingerprint({ fp }: { fp: string }) {
           </span>
         ))}
       </p>
-      <div className="barcode" aria-hidden>
-        {fp.split("").map((c, i) => (
-          <i key={i} style={{ height: `${((parseInt(c, 16) + 2) / 17) * 100}%` }} />
-        ))}
-      </div>
+      <Bars of={fp} />
     </>
+  );
+}
+
+/** A fingerprint's characters as bars: the higher the character, the taller its bar. */
+export function Bars({ of }: { of: string }) {
+  return (
+    <span className="barcode" aria-hidden>
+      {of.split("").map((c, i) => (
+        <i key={i} style={{ height: `${((parseInt(c, 16) + 2) / 17) * 100}%` }} />
+      ))}
+    </span>
   );
 }
 
@@ -127,7 +141,7 @@ export function Contracts({ ids, children }: { ids: readonly string[]; children?
 /** A verdict, or "none" where there isn't one. It picks the colour and the mark. */
 export type Tone = Verdict | "none";
 
-const MARK = { Real: CheckIcon, Fake: CrossIcon, Unclear: QuestionIcon, none: MinusIcon };
+export const MARK = { Real: CheckIcon, Fake: CrossIcon, Unclear: QuestionIcon, none: MinusIcon };
 
 /** A framed block of the product: a title bar saying what it is and where it's from, then its sections. */
 export function Frame({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
