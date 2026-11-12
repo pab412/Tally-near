@@ -27,7 +27,7 @@ You should see sample card A's record: `"verdict":"Real"`, `"check_id":"sample-a
 - Click **Sample B**, then the **Verified card** tab: you see **Held**, the picture wallets show for the NFT, and what the card holds from paid checks.
 - Click **Sample C**: you see **No record**.
 
-**3. Run the demo agent.** It pays for two checks with a key that can do nothing else (needs Node 20.9 or newer):
+**3. Run the demo agent.** It pays for checks with a key that can do nothing else, and answers allow, warn or block for each card (needs Node 20.9 or newer):
 
 ```
 git clone https://github.com/pab412/Tally-near
@@ -36,7 +36,15 @@ npm install
 node scripts/demo-agent.mjs
 ```
 
-You should see `BLOCK: DON'T COPY` for the card recorded Fake, `ALLOW: COPY` for sample card B with part of the fee going into its verified card, a receipt link under each check, and NEAR refusing when the agent, acting out one that was fooled by a message, tries to send its owner's money away.
+You should see `BLOCK: refuses` for the card recorded Fake, `ALLOW: goes ahead` for sample card B with part of the fee going into its verified card, and `BLOCK: refuses` for sample card C, which has no record. Under each answer is its reasons, taken from the record on NEAR, and a receipt link. Then NEAR refuses when the agent, acting out one that was fooled by a message, tries to send its owner's money away.
+
+**4. Check every claim at once.** In the same folder:
+
+```
+node scripts/evidence.mjs
+```
+
+You should see `13 of 13 match`. Each line is one free read of a contract on NEAR. The claims and what each one expects are in [EVIDENCE.md](EVIDENCE.md).
 
 An agent can follow the same steps from one file: [tally-near.vercel.app/SKILL.md](https://tally-near.vercel.app/SKILL.md).
 
@@ -53,8 +61,8 @@ An agent can follow the same steps from one file: [tally-near.vercel.app/SKILL.m
 | Verified card contract (NFT) | `contracts/card` | 30 unit tests pass, and the whole flow passes on testnet (`web/scripts/e2e-contracts.mjs`). Each token links to its picture and can hold money. Live on testnet at `card.notpab.testnet`. |
 | Paid check contract | `contracts/check` | 21 unit tests pass, and the whole flow passes on testnet in the same run, with an agent whose key can only pay for checks. Live on testnet at `check.notpab.testnet`. |
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
-| Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, and how the paid check talks to the card contract. 3 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 77 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, the allow / warn / block rule, and how the paid check talks to the card contract. 8 unit tests pass. |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 92 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses.
 
@@ -106,7 +114,7 @@ cd contracts/card
 cargo test
 ```
 
-You should see `30 passed`. `contracts/check` has 21 and `contracts/types` has 3 (`cargo test` in each folder).
+You should see `30 passed`. `contracts/check` has 21 and `contracts/types` has 8 (`cargo test` in each folder).
 
 Unit tests can't make one contract call another, so the whole flow is also tested on testnet. `web/scripts/e2e-contracts.mjs` deploys the three contracts under a testnet account you give it, then checks 43 things for real. For the card: a Real card mints after the registry is asked and links to its picture, a Fake or unchecked one is refused, nobody can fake the registry's answer, a transfer is refused, and a corrected verdict burns the card. For the paid check: an agent with no credit gets no answer, a check of a Real card costs one fee and half of it lands inside the verified card, a card with no record costs nothing, the agent's key can't send NEAR or call anything else, the holder withdraws, and after a correction the next paid check has the card burned with what it held. It needs the three `.wasm` files built (below) and a testnet account with about 8 NEAR:
 
@@ -205,14 +213,14 @@ node scripts/demo-agent.mjs
 
 It runs against `check.notpab.testnet` (`CHECK_CONTRACT=<account>` points it at another deployment). It makes its own throwaway testnet account with NEAR's testnet faucet (or uses yours: `AGENT_ACCOUNT=<account.json>`), then prints each step:
 
-1. The owner loads credit for two checks.
+1. The owner loads credit for the checks.
 2. The agent gets a key that can only call `check`.
-3. The agent pays for a check of each card and decides: copy the trader only if NEAR says the card is Real. Each line links to the transaction.
+3. The agent pays for a check of each card and answers allow, warn or block, with the reasons from the record. Real is allow. Unclear is warn: it stops and asks its owner "Go ahead? y/N" (with nobody at the keyboard, that is a no). Fake, no record, or no answer from NEAR is block. Each check links to its transaction.
 4. The agent tries to send the owner's NEAR to another account, and NEAR refuses.
 5. What the Real card's verified card now holds.
 6. The owner removes the agent's key and takes back unspent credit.
 
-It is a script with one rule (`web/scripts/agent-rule.mjs`), not an AI. What it demonstrates is the money side: the limit, the limited key, the fee and the trader's share.
+It is a script with one rule (`decide` in `web/scripts/agent-rule.mjs`; the contracts' copy is `decide` in `contracts/types`), not an AI. What it demonstrates is the money side: the limit, the limited key, the fee and the trader's share.
 
 ## The demo page
 
@@ -255,7 +263,7 @@ cd web
 npm test
 ```
 
-You should see `77 passed`.
+You should see `92 passed`.
 
 ### Try recording yourself
 
@@ -308,13 +316,13 @@ Without `RECORD_PASSWORD`, the account and the key all set, recording is switche
 | Charge an agent for nothing | No record, no charge. If the registry doesn't answer, nothing is charged. |
 | Pass a sample record off as a real check, or the other way round | Check ids starting `sample-` are the demo's. The route for Tally's own checks refuses them, and the demo only writes them. |
 
-Each refusal is covered by the contracts' unit tests and the run against testnet (`web/scripts/e2e-contracts.mjs`). What none of this stops is under "What you still have to trust".
+Each refusal is covered by the contracts' unit tests and the run against testnet (`web/scripts/e2e-contracts.mjs`). What none of this stops is under "What you still have to trust". Stolen keys, leaked secrets, wrong verdicts and outages are in [THREAT-MODEL.md](THREAT-MODEL.md).
 
 ### Tally's own checks
 
 The demo records sample checks. Tally's real ones arrive another way: Tally's server (tallypnl.com) posts a card's fingerprint, the verdict and its own id for the check to `/api/attest` on this site, with a secret the two servers share, and this site signs it with the same attester key (`web/lib/attest.ts`, 6 tests). Nothing else is sent: no name, no handle, no picture.
 
-- **What Tally sends.** Real, for a card Tally made itself from a member's linked wallet, at the moment it is posted. Fake, for a card on X whose fake verdict Tally's staff confirmed, and Unclear on top if that is later withdrawn. Never a verdict Tally reached on its own with no person confirming it.
+- **What Tally sends.** Real, for a Tally card: a person uploads their PnL card on tallypnl.com, and when it passes Tally's checks Tally draws it as a Tally card. The file of that Tally card is what is recorded. That Real is the verdict of Tally's own checker (nothing wrong was found), not a person's. Fake, for a card on X whose fake verdict Tally's staff confirmed, and Unclear on top if that is later withdrawn. Never a Fake that Tally reached on its own with no person confirming it.
 - **Kept apart from the samples.** A check id that starts `sample-` is the demo's mark and is refused here, so a real record can't pass for a sample or a sample for a real one. Real ones read `tally-<number>`.
 - **Sent twice, written once.** The registry is asked first; an entry that is already the card's latest is answered without signing again.
 - **The ledger.** The registry keeps no list, so the front page asks Tally which fingerprints it has sent (`/api/tally`, which reads tallypnl.com's public list) and then reads each record from NEAR itself. Every verdict shown still comes from NEAR.

@@ -1,0 +1,76 @@
+{
+  "network": "testnet",
+  "rpc": "https://rpc.testnet.fastnear.com",
+  "contracts": {
+    "proof": "proof.notpab.testnet",
+    "card": "card.notpab.testnet",
+    "check": "check.notpab.testnet"
+  },
+  "claims": [
+    {
+      "claim": "The registry holds at least three cards.",
+      "contract": "proof", "method": "cards", "args": {},
+      "expect": "3 or more", "test": {"atLeast": 3}
+    },
+    {
+      "claim": "Only Tally's attester can record a verdict, and it is notpab.testnet.",
+      "contract": "proof", "method": "attester", "args": {},
+      "expect": "\"notpab.testnet\"", "test": {"equals": "notpab.testnet"}
+    },
+    {
+      "claim": "Sample card A is Real, and its record has two entries.",
+      "contract": "proof", "method": "get", "args": {"fingerprint": "776b729a98a45576e4381c7732d4b0eafcbec4eecc114c79116d9a7002258dbe"},
+      "expect": "verdict Real, entries 2", "test": {"all": [{"at": "latest.verdict", "equals": "Real"}, {"at": "entries", "equals": 2}]}
+    },
+    {
+      "claim": "A corrected verdict is added on top and the old one stays: sample card A was recorded Fake, then Real.",
+      "contract": "proof", "method": "history", "args": {"fingerprint": "776b729a98a45576e4381c7732d4b0eafcbec4eecc114c79116d9a7002258dbe"},
+      "expect": "Fake, then Real", "test": {"each": "verdict", "equals": ["Fake", "Real"]}
+    },
+    {
+      "claim": "A record holds a verdict, Tally's id for the check and the time NEAR recorded it. No name, no handle.",
+      "contract": "proof", "method": "get", "args": {"fingerprint": "3171ca6c47b50b2218cc76275f573aa1670479e2ae2eada69c00f20236599e58"},
+      "expect": "fingerprint, latest (verdict, check_id, recorded_at_ms), entries", "test": {"all": [{"keys": ["entries", "fingerprint", "latest"]}, {"at": "latest", "keys": ["check_id", "recorded_at_ms", "verdict"]}]}
+    },
+    {
+      "claim": "Sample card B is Real.",
+      "contract": "proof", "method": "get", "args": {"fingerprint": "3171ca6c47b50b2218cc76275f573aa1670479e2ae2eada69c00f20236599e58"},
+      "expect": "verdict Real", "test": {"at": "latest.verdict", "equals": "Real"}
+    },
+    {
+      "claim": "The demo's Fake card is recorded Fake.",
+      "contract": "proof", "method": "get", "args": {"fingerprint": "cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8"},
+      "expect": "verdict Fake", "test": {"at": "latest.verdict", "equals": "Fake"}
+    },
+    {
+      "claim": "A card Tally never checked has no record: sample card C.",
+      "contract": "proof", "method": "get", "args": {"fingerprint": "01a765b799bb38ca88b75b64ec739a4c68bc6d9ecb7a77335d94da005d0c68bf"},
+      "expect": "null", "test": {"isNull": true}
+    },
+    {
+      "claim": "Sample card B has a verified card, held by notpab.testnet.",
+      "contract": "card", "method": "nft_token", "args": {"token_id": "3171ca6c47b50b2218cc76275f573aa1670479e2ae2eada69c00f20236599e58"},
+      "expect": "owner_id notpab.testnet", "test": {"at": "owner_id", "equals": "notpab.testnet"}
+    },
+    {
+      "claim": "At least one verified card exists.",
+      "contract": "card", "method": "nft_total_supply", "args": {},
+      "expect": "\"1\" or more", "test": {"atLeast": 1}
+    },
+    {
+      "claim": "A verified card's picture is drawn by this site.",
+      "contract": "card", "method": "nft_metadata", "args": {},
+      "expect": "base_uri https://tally-near.vercel.app", "test": {"at": "base_uri", "equals": "https://tally-near.vercel.app"}
+    },
+    {
+      "claim": "A paid check costs 0.01 NEAR, and half of it goes to the trader's verified card.",
+      "contract": "check", "method": "terms", "args": {},
+      "expect": "fee 10000000000000000000000 (0.01 NEAR), trader_percent 50", "test": {"all": [{"at": "fee", "equals": "10000000000000000000000"}, {"at": "trader_percent", "equals": 50}]}
+    },
+    {
+      "claim": "The paid check reads the same registry and pays into the same verified cards.",
+      "contract": "check", "method": "terms", "args": {},
+      "expect": "registry proof.notpab.testnet, cards card.notpab.testnet", "test": {"all": [{"at": "registry", "equals": "proof.notpab.testnet"}, {"at": "cards", "equals": "card.notpab.testnet"}]}
+    }
+  ]
+}

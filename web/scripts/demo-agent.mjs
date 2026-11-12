@@ -1,11 +1,13 @@
-// A small demo agent for Tally's paid check, on NEAR testnet. It is a script with one rule, not an AI: copy a trader
-// only if NEAR says their card is Real. What it shows is the money side of an agent:
+// A small demo agent for Tally's paid check, on NEAR testnet. It is a script with one rule, not an AI: act on a
+// trader's card by what NEAR says of it (allow, warn or block: agent-rule.mjs). What it shows is the money side of an
+// agent:
 //   - its owner loads a little credit, and that is all the agent can ever spend;
 //   - the agent's key can only pay for checks, so it can't send the owner's NEAR anywhere;
 //   - each answer comes from the registry on NEAR, and a Real card's trader is paid a share of the fee.
 //
 // Run: node scripts/demo-agent.mjs [fingerprint ...]
-//   With no fingerprints it checks two of the demo's cards: one recorded Fake, and sample card B.
+//   With no fingerprints it checks three of the demo's cards: one recorded Fake, sample card B (Real) and sample
+//   card C (Unclear once it is recorded so; until then it has no record, which is a block too).
 //   CHECK_CONTRACT=<account>      the paid check contract (default check.notpab.testnet)
 //   AGENT_ACCOUNT=<account.json>  a testnet account of yours, {"id","pub","key"}, instead of a throwaway one.
 //                                 Without it the script makes a throwaway account with NEAR's testnet faucet and
@@ -13,14 +15,15 @@
 import { Account, JsonRpcProvider, KeyPair, KeyPairSigner, getTransactionLastResult, teraToGas } from "near-api-js";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { ACTION, decide, inNear } from "./agent-rule.mjs";
+import { createInterface } from "node:readline/promises";
+import { DOES, decide, inNear } from "./agent-rule.mjs";
 
 const RPC = "https://rpc.testnet.fastnear.com";
 const CHECK = process.env.CHECK_CONTRACT || "check.notpab.testnet";
 const KEPT = new URL("../.demo-agent.json", import.meta.url);
 const FAKE = "cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be332b8"; // recorded Fake on proof.notpab.testnet
-const sampleB = () => createHash("sha256").update(readFileSync(new URL("../public/samples/sample-card-b.png", import.meta.url))).digest("hex");
-const cards = process.argv.slice(2).length ? process.argv.slice(2) : [FAKE, sampleB()];
+const sample = (letter) => createHash("sha256").update(readFileSync(new URL(`../public/samples/sample-card-${letter}.png`, import.meta.url))).digest("hex");
+const cards = process.argv.slice(2).length ? process.argv.slice(2) : [FAKE, sample("b"), sample("c")];
 
 const provider = new JsonRpcProvider({ url: RPC });
 const view = async (contractId, method, args = {}) => {
@@ -36,6 +39,18 @@ process.on("unhandledRejection", (err) => stop(`Stopped: ${err?.message ?? err}`
 if (cards.some((fp) => !/^[0-9a-f]{64}$/.test(fp))) stop("A fingerprint is 64 lower-case hex characters.");
 const terms = await view(CHECK, "terms").catch(() => stop(`${CHECK} isn't answering on NEAR testnet. Set CHECK_CONTRACT to a deployed paid check contract.`));
 const fee = BigInt(terms.fee);
+
+/**
+ * On warn the agent stops and asks its owner. With nobody at the keyboard (a tool running the script), nobody said yes,
+ * so it doesn't go ahead.
+ */
+async function askOwner() {
+  if (!process.stdin.isTTY) return 'It asks its owner "Go ahead? y/N". Nobody is at the keyboard, so the answer is no: it doesn\'t go ahead.';
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const said = (await rl.question("      The agent stopped. Go ahead? y/N ")).trim().toLowerCase();
+  rl.close();
+  return said === "y" || said === "yes" ? "The owner said yes: it goes ahead on the owner's word, not its own." : "The owner said no: it doesn't go ahead.";
+}
 
 /** The owner's testnet account: yours, the one kept from an earlier run, or a new throwaway from the faucet. */
 async function ownerAccount() {
@@ -59,7 +74,7 @@ const owner = new Account(me.id, provider, KeyPairSigner.fromSecretKey(me.key));
 const credit = async () => BigInt(await view(CHECK, "credit_of", { account_id: me.id }));
 
 say(`Tally demo agent, on NEAR testnet`);
-say(`Rule: copy a trader only if NEAR says their card is Real. Real: allow. Fake: block. Unclear or never checked: ask the owner.`);
+say(`Rule: Real is allow (go ahead). Unclear is warn (stop and ask the owner). Fake, no record, or no answer from NEAR is block.`);
 say(`A check costs ${inNear(fee)} NEAR at ${CHECK}; ${terms.trader_percent}% of it goes to the trader's verified card.`);
 say();
 
@@ -80,10 +95,14 @@ say();
 say(`3. The agent checks ${cards.length} cards:`);
 const earned = [];
 for (const fingerprint of cards) {
-  const tx = await agent.callFunctionRaw({ contractId: CHECK, methodName: "check", args: { fingerprint }, gas: teraToGas(100) });
-  const answer = getTransactionLastResult(tx);
-  const { action, why } = decide(answer);
-  say(`   ${short(fingerprint)}  paid ${inNear(answer.charged)} NEAR  ->  ${why}  ->  ${ACTION[action]}`);
+  // (a check that doesn't come back is no answer: the rule blocks on that too)
+  const tx = await agent.callFunctionRaw({ contractId: CHECK, methodName: "check", args: { fingerprint }, gas: teraToGas(100) }).catch(() => null);
+  const answer = tx ? getTransactionLastResult(tx) : null;
+  const { decision, reasons } = decide(answer);
+  say(`   ${short(fingerprint)}  paid ${inNear(answer?.charged ?? 0)} NEAR  ->  ${DOES[decision]}`);
+  say(`      why: ${reasons.join("; ")}`);
+  if (decision === "warn") say(`      ${await askOwner()}`);
+  if (!answer) continue;
   if (answer.to_trader !== "0") say(`      ${inNear(answer.to_trader)} NEAR of the fee went into the trader's verified card.`);
   // the receipt: what was bought (a check of this card), from whom, for how much, and what came back, on NEAR for good
   say(`      receipt: https://testnet.nearblocks.io/txns/${tx.transaction.hash}`);

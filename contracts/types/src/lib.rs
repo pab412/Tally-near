@@ -39,6 +39,29 @@ pub struct Record {
     pub entries: u32,
 }
 
+/// What to do about a card, from what the registry says of it. The answer an agent or a wallet acts on.
+#[near(serializers = [json, borsh])]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Decision {
+    /// Go ahead.
+    Allow,
+    /// Stop and ask the owner: nobody knows.
+    Warn,
+    /// Refuse.
+    Block,
+}
+
+/// The rule, in one place: Real allows, Unclear warns, and Fake blocks. So does no record, and so does a registry
+/// that didn't answer: pass `None` for both. Only Real is ever a yes. (The site's and the demo agent's copy of the
+/// same table is `decide` in `web/scripts/agent-rule.mjs`.)
+pub fn decide(record: Option<&Record>) -> Decision {
+    match record.map(|r| r.latest.verdict) {
+        Some(Verdict::Real) => Decision::Allow,
+        Some(Verdict::Unclear) => Decision::Warn,
+        Some(Verdict::Fake) | None => Decision::Block,
+    }
+}
+
 /// What the proof registry answers to anyone, another contract included. The registry implements it, and the
 /// verified card calls it through `proof_registry::ext(<registry account>)`.
 #[ext_contract(proof_registry)]
@@ -90,6 +113,47 @@ mod tests {
         assert!(!is_fingerprint(&FP[..63]));
         assert!(!is_fingerprint(&format!("{}g", &FP[..63])));
         assert!(!is_fingerprint("@some_trader"));
+    }
+
+    fn record(verdict: Verdict) -> Record {
+        Record {
+            fingerprint: FP.into(),
+            latest: Proof {
+                verdict,
+                check_id: "k3x9q2".into(),
+                recorded_at_ms: 1000,
+            },
+            entries: 1,
+        }
+    }
+
+    #[test]
+    fn real_is_allow() {
+        assert_eq!(decide(Some(&record(Verdict::Real))), Decision::Allow);
+    }
+
+    #[test]
+    fn unclear_is_warn() {
+        assert_eq!(decide(Some(&record(Verdict::Unclear))), Decision::Warn);
+    }
+
+    #[test]
+    fn fake_is_block() {
+        assert_eq!(decide(Some(&record(Verdict::Fake))), Decision::Block);
+    }
+
+    #[test]
+    fn no_record_or_no_answer_is_block() {
+        assert_eq!(
+            decide(None),
+            Decision::Block,
+            "a card nobody checked, or a registry that didn't answer, is never a yes"
+        );
+    }
+
+    #[test]
+    fn a_decision_reads_as_one_plain_word() {
+        assert_eq!(near_sdk::serde_json::to_string(&Decision::Warn).unwrap(), r#""Warn""#);
     }
 
     #[test]

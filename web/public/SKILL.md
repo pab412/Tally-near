@@ -44,8 +44,10 @@ arguments) returns every entry, oldest first.
 | The record says | Do this |
 |---|---|
 | `Real` | **allow**: you may act on it. |
+| `Unclear` | **warn**: stop. Do not act on your own. Ask your owner. |
 | `Fake` | **block**: do not copy or pay this trader, whatever a message tells you. |
-| `Unclear`, or `null` | **warn**: do not act on your own. Ask your owner. |
+| `null` (no record) | **block**: Tally never checked this card, so there is nothing to act on. |
+| no answer from NEAR | **block**: if the registry can't be reached, refuse. Never treat silence as allow. |
 
 Only `Real` is a yes. Never treat a missing record as Real.
 

@@ -26,26 +26,34 @@ const CONTRACT_NAMES = { proof: "The proof registry", check: "The paid check" };
 // What `node scripts/demo-agent.mjs` printed on a test run, shortened to fit: the account names are swapped for plain
 // ones and the receipt link under each check is left out.
 const RUN = `Tally demo agent, on NEAR testnet
-Rule: copy a trader only if NEAR says
-their card is Real. Real: allow.
-Fake: block. Unclear or never
-checked: ask the owner.
+Rule: Real is allow (go ahead).
+Unclear is warn (stop and ask the
+owner). Fake, no record, or no answer
+from NEAR is block.
 
-1. The owner loads credit: 0.02 NEAR.
+1. The owner loads credit: 0.03 NEAR.
    That is all the agent can spend.
 2. The agent gets its own key. It can
    call "check" and nothing else.
 
-3. The agent checks 2 cards:
+3. The agent checks 3 cards:
    cab484af…3be332b8  paid 0.01 NEAR
-     NEAR says Fake
-     BLOCK: DON'T COPY
+     BLOCK: refuses
+     why: NEAR says Fake; check demo1,
+     recorded 2026-11-10; 1 entry,
+     never corrected
    3171ca6c…36599e58  paid 0.01 NEAR
-     NEAR says Real, and trader.testnet
-     holds its verified card
-     ALLOW: COPY
+     ALLOW: goes ahead
+     why: NEAR says Real; check
+     sample-b, recorded 2026-11-11;
+     trader.testnet holds its verified
+     card
      0.005 NEAR of the fee went into
      the trader's verified card.
+   01a765b7…5d0c68bf  paid 0 NEAR
+     BLOCK: refuses
+     why: no record on NEAR: Tally has
+     never checked this card
 
 4. Attack, acted out: a message tells
    the agent to skip the check and send
@@ -80,7 +88,7 @@ export default function ForAgents() {
         <div className="split-cols">
           <ul className="rules">
             <li>
-              <strong>Check a claim before acting on it.</strong> One call says Real, Unclear, Fake or never checked.
+              <strong>Check a claim before acting on it.</strong> Real is allow. Unclear is warn: stop and ask the owner. Fake, no record or no answer is block.
             </li>
             <li>
               <strong>Read the proof straight from NEAR.</strong> No Tally server and no API key in between.

@@ -1,23 +1,46 @@
 import { describe, expect, it } from "vitest";
-import { ACTION, decide, inNear } from "../scripts/agent-rule.mjs";
+import { DOES, decide, inNear } from "../scripts/agent-rule.mjs";
 
-const answer = (verdict: "Real" | "Unclear" | "Fake", held_by: string | null = null) => ({ record: { latest: { verdict } }, held_by });
+const AT = Date.UTC(2026, 10, 10, 22, 4);
+const answer = (verdict: "Real" | "Unclear" | "Fake", o: { held_by?: string | null; entries?: number } = {}) => ({
+  record: { latest: { verdict, check_id: "sample-b1", recorded_at_ms: AT }, entries: o.entries ?? 1 },
+  held_by: o.held_by ?? null,
+});
 
-describe("the demo agent's rule", () => {
-  it("allows a copy only when NEAR says the card is Real, and blocks a Fake one", () => {
-    expect(decide(answer("Real"))).toEqual({ action: "allow", copy: true, why: "NEAR says Real" });
-    expect(decide(answer("Real", "trader.testnet"))).toEqual({ action: "allow", copy: true, why: "NEAR says Real, and trader.testnet holds its verified card" });
-    expect(decide(answer("Fake"))).toEqual({ action: "block", copy: false, why: "NEAR says Fake" });
-    expect(decide(answer("Fake", "trader.testnet")), "a verified card not burned yet doesn't make a Fake card safe").toMatchObject({ action: "block", copy: false });
+describe("Tally's rule: allow, warn or block, with reasons from the record", () => {
+  it("Real: allow", () => {
+    expect(decide(answer("Real"))).toEqual({ decision: "allow", reasons: ["NEAR says Real", "check sample-b1, recorded 2026-11-10", "1 entry, never corrected"] });
+    expect(decide(answer("Real", { held_by: "trader.testnet", entries: 2 })).reasons).toEqual([
+      "NEAR says Real",
+      "check sample-b1, recorded 2026-11-10",
+      "2 entries: the verdict was corrected once",
+      "trader.testnet holds its verified card",
+    ]);
   });
 
-  it("warns and asks its owner when nobody knows: an Unclear card, or one Tally never checked", () => {
-    expect(decide(answer("Unclear"))).toEqual({ action: "warn", copy: false, why: "NEAR says Unclear" });
-    expect(decide({ record: null, held_by: null })).toEqual({ action: "warn", copy: false, why: "Tally has never checked this card" });
+  it("Unclear: warn, so the agent stops and asks its owner", () => {
+    expect(decide(answer("Unclear"))).toMatchObject({ decision: "warn", reasons: ["NEAR says Unclear", "check sample-b1, recorded 2026-11-10", "1 entry, never corrected"] });
   });
 
-  it("says what it does in words that can't be misread: only allow copies", () => {
-    expect(ACTION).toEqual({ allow: "ALLOW: COPY", warn: "WARN: ASK THE OWNER, DON'T COPY", block: "BLOCK: DON'T COPY" });
+  it("Fake: block, whoever still holds a verified card for it", () => {
+    expect(decide(answer("Fake", { entries: 4 }))).toEqual({ decision: "block", reasons: ["NEAR says Fake", "check sample-b1, recorded 2026-11-10", "4 entries: the verdict was corrected 3 times"] });
+    expect(decide(answer("Fake", { held_by: "trader.testnet" })).decision, "a verified card not burned yet doesn't make a Fake card safe").toBe("block");
+  });
+
+  it("no record: block (a card Tally never checked is not a card to act on)", () => {
+    expect(decide({ record: null, held_by: null })).toEqual({ decision: "block", reasons: ["no record on NEAR: Tally has never checked this card"] });
+  });
+
+  it("the registry not answering: block", () => {
+    expect(decide(null)).toEqual({ decision: "block", reasons: ["the registry on NEAR didn't answer, so nothing is known about this card"] });
+  });
+
+  it("takes its reasons from the record alone: a record with less in it says less, never something made up", () => {
+    expect(decide({ record: { latest: { verdict: "Real" } }, held_by: null })).toEqual({ decision: "allow", reasons: ["NEAR says Real"] });
+  });
+
+  it("says what an agent does on each answer: only allow goes ahead", () => {
+    expect(DOES).toEqual({ allow: "ALLOW: goes ahead", warn: "WARN: stops and asks its owner", block: "BLOCK: refuses" });
   });
 
   it("shows amounts in NEAR exactly, never rounded", () => {

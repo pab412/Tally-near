@@ -1,25 +1,38 @@
-// The demo agent's one rule, and how it shows an amount. Kept apart from the script that spends money so it can be
-// tested on its own (tests/agent.test.ts).
+// Tally's rule for acting on a check (allow, warn or block), and how an amount is shown. Kept apart from the script
+// that spends money so it can be tested on its own (tests/agent.test.ts) and used by the site.
 
 /**
- * What the agent does about a trader, from what the paid check answered about their card:
- *   allow: the card is Real, so it copies;
- *   block: the card is Fake, so it doesn't, whatever it is told;
- *   warn:  nobody knows (Unclear, or Tally never checked the card), so it doesn't act on its own and asks its owner.
- * It only ever copies on allow.
- * @param {{ record: { latest: { verdict: "Real" | "Unclear" | "Fake" } } | null, held_by: string | null }} answer
- * @returns {{ action: "allow" | "warn" | "block", copy: boolean, why: string }}
+ * The rule every Tally check answers by, in one place (the demo agent, the site and SKILL.md all use it; the contracts'
+ * copy is `decide` in contracts/types):
+ *
+ *   NEAR says                 answer   what an agent does
+ *   Real                      allow    goes ahead
+ *   Unclear                   warn     stops and asks its owner
+ *   Fake                      block    refuses
+ *   no record                 block    refuses
+ *   the registry not answering block   refuses
+ *
+ * The reasons come from the record itself, never made up: the verdict, the check's id and date, how many entries the
+ * card has (more than one means it was corrected), and who holds its verified card.
+ *
+ * @param {{ record: { latest: { verdict: "Real" | "Unclear" | "Fake", check_id?: string, recorded_at_ms?: number }, entries?: number } | null, held_by?: string | null } | null} answer
+ *   what NEAR answered about the card; null when the registry didn't answer at all
+ * @returns {{ decision: "allow" | "warn" | "block", reasons: string[] }}
  */
 export function decide(answer) {
-  if (!answer.record) return { action: "warn", copy: false, why: "Tally has never checked this card" };
-  const { verdict } = answer.record.latest;
-  if (verdict === "Fake") return { action: "block", copy: false, why: "NEAR says Fake" };
-  if (verdict !== "Real") return { action: "warn", copy: false, why: `NEAR says ${verdict}` };
-  return { action: "allow", copy: true, why: answer.held_by ? `NEAR says Real, and ${answer.held_by} holds its verified card` : "NEAR says Real" };
+  if (!answer) return { decision: "block", reasons: ["the registry on NEAR didn't answer, so nothing is known about this card"] };
+  if (!answer.record) return { decision: "block", reasons: ["no record on NEAR: Tally has never checked this card"] };
+  const { latest, entries } = answer.record;
+  const reasons = [`NEAR says ${latest.verdict}`];
+  if (latest.check_id) reasons.push(`check ${latest.check_id}${latest.recorded_at_ms ? `, recorded ${new Date(latest.recorded_at_ms).toISOString().slice(0, 10)}` : ""}`);
+  if (entries) reasons.push(entries === 1 ? "1 entry, never corrected" : `${entries} entries: the verdict was corrected ${entries === 2 ? "once" : `${entries - 1} times`}`);
+  if (answer.held_by) reasons.push(`${answer.held_by} holds its verified card`);
+  const decision = latest.verdict === "Real" ? "allow" : latest.verdict === "Unclear" ? "warn" : "block";
+  return { decision, reasons };
 }
 
-/** What the agent prints for each action. */
-export const ACTION = { allow: "ALLOW: COPY", warn: "WARN: ASK THE OWNER, DON'T COPY", block: "BLOCK: DON'T COPY" };
+/** The three answers, with what an agent does on each. */
+export const DOES = { allow: "ALLOW: goes ahead", warn: "WARN: stops and asks its owner", block: "BLOCK: refuses" };
 
 /**
  * yoctoNEAR as NEAR, with no rounding: "5000000000000000000000" becomes "0.005".
