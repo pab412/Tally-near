@@ -2,7 +2,7 @@
 // all three and signs with the attester key from its environment. The key never reaches the browser or the repo.
 
 import { randomBytes } from "node:crypto";
-import { admit, fail, notWritten, refused, type DemoEnv, type Fail, type Signer } from "./demo";
+import { HOSTED_REGISTRY, admit, demoMayWrite, fail, notWritten, refused, type DemoEnv, type Fail, type Signer } from "./demo";
 import { VERDICTS, type ProofRecord, type Verdict } from "./near";
 
 export interface SignRequest extends Signer {
@@ -31,6 +31,8 @@ export async function handleRecord(
   if (refused(admitted)) return admitted;
   const { input, fingerprint, signer } = admitted;
   if (!VERDICTS.includes(input.verdict as Verdict)) return fail(422, "Pick Real, Unclear or Fake.");
+  const notHere = await demoMayWrite(fingerprint, env.read, env.contractId === HOSTED_REGISTRY);
+  if (notHere) return notHere;
 
   try {
     return { status: 200, body: await sign({ ...signer, fingerprint, verdict: input.verdict as Verdict, checkId: checkId() }) };

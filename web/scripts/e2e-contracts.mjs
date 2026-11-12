@@ -104,7 +104,8 @@ await call(R, PROOF, "record", { fingerprint: C, verdict: "Real", check_id: "e2e
 const m2 = await call(R, CARD, "mint", { fingerprint: C, owner: root.id }, { gas: 30 });
 ok("minting works with 30 Tgas attached", getTransactionLastResult(m2)?.token_id === C, gasOf(m2));
 const b = await call(R, CARD, "burn", { token_id: C }, { deposit: 1n });
-ok("the holder can burn their own card", (await view(CARD, "nft_token", { token_id: C })) === null, gasOf(b));
+// a view straight after the call can reach a node that hasn't seen it yet, so it is read until it shows
+ok("the holder can burn their own card", await until(async () => (await view(CARD, "nft_token", { token_id: C })) === null), gasOf(b));
 
 // The paid check. D is Real and has a verified card, E is Fake, F was never checked.
 const D = fp(), E = fp(), F = fp();

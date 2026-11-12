@@ -78,7 +78,7 @@ An agent can follow the same steps from one file: [tally-near.vercel.app/SKILL.m
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
 | Plug-in for Claude Code and Codex | `mcp` | An MCP server with three free reads: `check_card`, `card_history` and `fingerprint_file`. No key, nothing paid, nothing written. 10 tests pass, and `node try.mjs` asks NEAR for real. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, the allow / warn / block rule, and how the paid check talks to the card contract. 8 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 137 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 146 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses. The guard wallet answers at `tally-guard.testnet`.
 
@@ -352,7 +352,7 @@ cd web
 npm test
 ```
 
-You should see `137 passed`.
+You should see `146 passed`.
 
 ### Try recording yourself
 
@@ -424,7 +424,7 @@ The demo records sample checks. Tally's real ones arrive another way: Tally's se
 - **The contract accounts still have their deploy keys.** "Nobody can change it" is true of the rules as written. On testnet, whoever holds a contract account's full-access key could still replace its code. Deleting those keys makes the rules permanent, and anyone can check that an account has none; that is the step before mainnet.
 - **Only unclaimed money is lost with a burned card.** A holder can withdraw whenever the registry says Real, so a card that is corrected later loses what it holds at that moment, not what was already taken out.
 - **The paid check is a choice.** Records are public, so an agent can read them for free. It pays for the receipt and to reward the trader.
-- **The demo's write buttons sit behind one shared password, with no limit on attempts.** That is why the keys behind them are function-call keys: each can only call `record`, or `mint` and `recheck`, on testnet, with a 0.25 NEAR gas allowance. A guessed password could add sample records to the testnet registry and nothing more.
+- **The demo's write buttons sit behind one shared password, with no limit on attempts.** That is why the keys behind them are function-call keys: each can only call `record`, or `mint` and `recheck`, on testnet, with a 0.25 NEAR gas allowance. A guessed password could add sample records to the testnet registry and nothing more: the demo asks the registry first and won't write over, or mint, a card whose latest entry is one of Tally's own checks, and on the hosted registry it leaves the site's example cards as they are.
 - **Tally's server can write a verdict too**, through `/api/attest`, with a secret in place of the demo's password. It signs with the same function-call key, so the same limits hold: `record` only, testnet only.
 - **The picture is drawn off-chain**, by this site. The token's link carries only the fingerprint, and the record on NEAR is what counts.
 

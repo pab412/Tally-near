@@ -144,7 +144,7 @@ export default async function CardPage({ params }: Props) {
         )}
       </div>
 
-      {held && held.holdsYocto !== "0" && (
+      {real && held && held.holdsYocto !== "0" && (
         <div className="card-quote">
           <SolanaQuote fingerprint={fingerprint} holds={near(held.holdsYocto)} />
         </div>

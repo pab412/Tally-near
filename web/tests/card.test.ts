@@ -10,6 +10,7 @@ const ENV: DemoEnv = {
   key: "ed25519:SAMPLEKEYNOTREAL",
   contractId: "card.attester.testnet",
   rpcUrl: "https://rpc.example",
+  read: async () => null,
 };
 const mint = { password: "sample-password", fingerprint: FP, action: "mint", holder: "sample-trader.testnet" };
 const CARD = { fingerprint: FP, holder: "sample-trader.testnet", mintedAtMs: 1, checkId: "sample-a1", holdsYocto: "0" };
@@ -76,6 +77,16 @@ describe("verified card route", () => {
     expect((await handleCard({ ...mint, action: "burn" }, ENV, sign)).status).toBe(422);
     expect(sign).not.toHaveBeenCalled();
     expect(isTestnetAccount("sample-trader.testnet") && isTestnetAccount("card.sample_1.testnet")).toBe(true);
+  });
+
+  it("only mints a card the demo itself recorded, never one of Tally's own checks", async () => {
+    const sign = okSigner();
+    const tallys = { fingerprint: FP, latest: { verdict: "Real" as const, check_id: "tally-42", recorded_at_ms: 1 }, entries: 1 };
+    expect((await handleCard(mint, { ...ENV, read: async () => tallys }, sign)).status).toBe(409);
+    expect((await handleCard(mint, { ...ENV, read: async () => Promise.reject(new Error("down")) }, sign)).status).toBe(502);
+    expect(sign).not.toHaveBeenCalled();
+    // a recheck only ever burns a card the registry no longer backs, and anyone may ask for one
+    expect((await handleCard({ ...mint, action: "recheck" }, { ...ENV, read: async () => tallys }, sign)).status).toBe(200);
   });
 });
 

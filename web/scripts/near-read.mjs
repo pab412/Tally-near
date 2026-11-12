@@ -50,25 +50,55 @@ export class NearReadError extends Error {
   }
 }
 
+/** How long to wait before asking again when the public node says it is busy (429) or unavailable (503). */
+const RETRY_MS = [300, 900];
+
+/** Reads on their way to the node now, so the same read asked for at the same moment is sent once. */
+const inFlight = new Map();
+
 /**
  * Calls a read-only contract method and returns its JSON result.
  * @param {string} contractId
  * @param {string} method
  * @param {object} [args]
- * @param {{ rpcUrl?: string, fetch?: typeof fetch, finality?: "optimistic" | "final", timeoutMs?: number }} [opts]
+ * @param {{ rpcUrl?: string, fetch?: typeof fetch, finality?: "optimistic" | "final", timeoutMs?: number, retryMs?: number[] }} [opts]
  * @returns {Promise<any>}
  */
-export async function view(contractId, method, args = {}, opts = {}) {
+export function view(contractId, method, args = {}, opts = {}) {
+  const url = opts.rpcUrl ?? RPC_URL;
+  const body = JSON.stringify(viewRequest(method, args, contractId, opts.finality));
+  // a read given its own fetch (a test's fake) is never shared with another
+  if (opts.fetch) return readOnce(url, body, opts);
+  const key = `${url} ${body} ${opts.timeoutMs ?? ""} ${opts.retryMs ?? ""}`;
+  let pending = inFlight.get(key);
+  if (!pending) {
+    pending = readOnce(url, body, opts).finally(() => inFlight.delete(key));
+    inFlight.set(key, pending);
+  }
+  return pending;
+}
+
+/** @param {string} url @param {string} body @param {{ fetch?: typeof fetch, timeoutMs?: number, retryMs?: number[] }} opts */
+async function readOnce(url, body, opts) {
+  const retryMs = opts.retryMs ?? RETRY_MS;
   let res;
-  try {
-    res = await (opts.fetch ?? fetch)(opts.rpcUrl ?? RPC_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(viewRequest(method, args, contractId, opts.finality)),
-      signal: AbortSignal.timeout(opts.timeoutMs ?? 10_000),
-    });
-  } catch {
-    throw new NearReadError("unreachable");
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await (opts.fetch ?? fetch)(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal: AbortSignal.timeout(opts.timeoutMs ?? 10_000),
+      });
+    } catch {
+      throw new NearReadError("unreachable");
+    }
+    // the public node limits how often one address asks: when it is busy, wait a moment and ask again
+    if ((res.status === 429 || res.status === 503) && attempt < retryMs.length) {
+      await new Promise((done) => setTimeout(done, retryMs[attempt]));
+      continue;
+    }
+    break;
   }
   if (!res.ok) throw new NearReadError("refused");
   const json = await res.json().catch(() => null);

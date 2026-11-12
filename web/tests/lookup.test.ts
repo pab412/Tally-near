@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { formatDay, lookup, LookupError, shortFingerprint, verdictSentence, type Proof, type ProofRecord } from "@/lib/near";
+import { NearReadError, view } from "@/scripts/near-read.mjs";
 
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const AT = Date.UTC(2026, 10, 10, 22, 4); // 10 Nov 2026
@@ -86,5 +87,33 @@ describe("the request an AI agent is shown", () => {
     await lookup(FP, { fetch: near.fetch, contractId: "proof.sample.testnet" });
     const sent = JSON.parse(String((near.fetch as unknown as { mock: { calls: [unknown, RequestInit][] } }).mock.calls[0][1].body));
     expect(sent).toEqual(req);
+  });
+});
+
+describe("one read of a contract", () => {
+  const answer = (value: unknown) => new Response(JSON.stringify({ result: { result: Array.from(new TextEncoder().encode(JSON.stringify(value))) } }));
+
+  it("asks again when the public node says it is busy, and says refused only after the last wait", async () => {
+    let n = 0;
+    const busyTwice = vi.fn(async () => (++n <= 2 ? new Response("busy", { status: 429 }) : answer(3)));
+    expect(await view("proof.sample.testnet", "cards", {}, { fetch: busyTwice as unknown as typeof fetch, retryMs: [0, 0] })).toBe(3);
+    expect(busyTwice).toHaveBeenCalledTimes(3);
+    const alwaysBusy = vi.fn(async () => new Response("busy", { status: 429 }));
+    await expect(view("proof.sample.testnet", "cards", {}, { fetch: alwaysBusy as unknown as typeof fetch, retryMs: [0, 0] })).rejects.toThrow(NearReadError);
+    expect(alwaysBusy).toHaveBeenCalledTimes(3);
+  });
+
+  it("sends the same read asked for at the same moment once, so a burst of visitors isn't refused by the node", async () => {
+    const node = vi.fn(async () => answer({ verdict: "Real" }));
+    vi.stubGlobal("fetch", node);
+    try {
+      const reads = await Promise.all(Array.from({ length: 25 }, () => view("proof.sample.testnet", "get", { fingerprint: FP })));
+      expect(new Set(reads.map((r) => JSON.stringify(r)))).toEqual(new Set(['{"verdict":"Real"}']));
+      expect(node).toHaveBeenCalledTimes(1);
+      await view("proof.sample.testnet", "get", { fingerprint: FP }); // once answered, it is asked afresh
+      expect(node).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

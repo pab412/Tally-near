@@ -31,13 +31,13 @@ const mint = (owner: string, when: number, token = FP) => tx(call("on_mint_check
 const burn = (owner: string, when: number) => tx(call("on_rechecked", { fingerprint: FP }, when, { logs: [event("nft_burn", owner)] }));
 
 /** FastNEAR's index, faked: the contract's transactions, newest first, and each one in full, twenty at a time. */
-function index(txs: Tx[], { more = false, down = [] as string[] } = {}) {
+function index(txs: Tx[], { more = false, down = [] as string[], busyFirst = 0 } = {}) {
   const asked: { path: string; body: Record<string, unknown> }[] = [];
   const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const path = String(input).replace(INDEX, "");
     const body = JSON.parse(init!.body as string) as Record<string, unknown>;
     asked.push({ path, body });
-    if (down.includes(path)) return new Response("no", { status: 429 });
+    if (down.includes(path) || asked.length <= busyFirst) return new Response("no", { status: 429 });
     if (path === "/account") return Response.json({ account_txs: [...txs].reverse().map((t) => ({ transaction_hash: t.transaction.hash })), resume_token: more ? "more" : null });
     const wanted = body.tx_hashes as string[];
     if (wanted.length > 20) return new Response("too many", { status: 400 });
@@ -45,7 +45,7 @@ function index(txs: Tx[], { more = false, down = [] as string[] } = {}) {
   });
   return { fetch: fetch as unknown as typeof globalThis.fetch, asked };
 }
-const read = (fake: ReturnType<typeof index>, fingerprint = FP) => cardHistory(fingerprint, { contractId: CARD, fetch: fake.fetch });
+const read = (fake: ReturnType<typeof index>, fingerprint = FP, retryMs: number[] = []) => cardHistory(fingerprint, { contractId: CARD, fetch: fake.fetch, retryMs });
 
 describe("a verified card's history", () => {
   it("lists what happened to the card, oldest first: minted, paid in, paid out", async () => {
@@ -108,9 +108,25 @@ describe("a verified card's history", () => {
     expect(fake.asked.map((a) => a.path)).toEqual(["/account", "/transactions", "/transactions", "/transactions"]);
     expect(fake.asked[0].body).toEqual({ account_id: CARD, limit: 200 });
     expect(fake.asked.slice(1).map((a) => (a.body.tx_hashes as string[]).length)).toEqual([20, 20, 5]);
-    // what a transaction did never changes: a second look only asks which transactions there are
-    await read(fake);
-    expect(fake.asked.slice(4).map((a) => a.path)).toEqual(["/account"]);
+    // what a transaction did never changes, and the list of them is shared for a moment: a second look asks nothing
+    expect((await read(fake, OTHER)).events).toEqual([]);
+    expect(fake.asked).toHaveLength(4);
+  });
+
+  it("shares one request for the list among pages opened at once, so a burst of visitors isn't refused by the index", async () => {
+    const fake = index([mint("t.testnet", 1)]);
+    await Promise.all(Array.from({ length: 30 }, () => read(fake)));
+    expect(fake.asked.map((a) => a.path)).toEqual(["/account", "/transactions"]);
+  });
+
+  it("asks again when the index says it is busy, and gives up only after the last wait", async () => {
+    const busy = index([mint("t.testnet", 1)], { busyFirst: 2 });
+    expect((await read(busy, FP, [0, 0])).holders).toHaveLength(1);
+    expect(busy.asked.map((a) => a.path)).toEqual(["/account", "/account", "/account", "/transactions"]);
+    const tooBusy = index([mint("t.testnet", 1)], { busyFirst: 3 });
+    await expect(read(tooBusy, FP, [0, 0])).rejects.toThrow(new HistoryError("the index answered 429"));
+    // a failed answer is never kept: the next page asks afresh
+    expect((await read(tooBusy, FP, [0, 0])).holders).toHaveLength(1);
   });
 });
 

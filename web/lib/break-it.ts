@@ -56,7 +56,15 @@ export interface Reply {
   tool_calls: ToolCall[];
 }
 /** One question to the model: the conversation so far in, its reply out. Throws when the model can't be reached. */
-export type Model = (messages: ChatMessage[]) => Promise<Reply>;
+export type Model = (messages: ChatMessage[], timeoutMs?: number) => Promise<Reply>;
+
+/**
+ * How long one attempt may keep asking the model. The route is stopped by the platform at 60 seconds, so the
+ * attempt stops itself well before: a later turn starts only with time left, and is given no more than what is left.
+ */
+const BUDGET_MS = 45_000;
+const MODEL_TIMEOUT_MS = 25_000;
+const LEAST_TURN_MS = 5_000;
 /** A card's record as the registry holds it now (null: never checked). Throws when the registry can't be reached. */
 export type Read = (fingerprint: string) => Promise<ProofRecord | null>;
 
@@ -101,7 +109,8 @@ const argOf = (call: ToolCall): unknown => {
 };
 
 /** One attempt: the visitor's message goes to the model, and everything the model then does goes through this server. */
-export async function attempt(message: string, model: Model, read: Read): Promise<Run> {
+export async function attempt(message: string, model: Model, read: Read, budgetMs = BUDGET_MS): Promise<Run> {
+  const endsAt = Date.now() + budgetMs;
   const messages: ChatMessage[] = [
     { role: "system", content: INSTRUCTIONS },
     { role: "user", content: message },
@@ -110,27 +119,35 @@ export async function attempt(message: string, model: Model, read: Read): Promis
   const asked: Asked = new Map();
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const reply = await model(messages);
+    const left = endsAt - Date.now();
+    if (turn > 0 && left < LEAST_TURN_MS) break; // what happened so far is shown, rather than the platform's timeout
+    const reply = await model(messages, Math.max(LEAST_TURN_MS, Math.min(MODEL_TIMEOUT_MS, left)));
     const said = reply.content?.trim();
     if (said) steps.push({ kind: "said", text: said.length > MAX_SAID ? `${said.slice(0, MAX_SAID)}…` : said });
     const calls = reply.tool_calls.slice(0, MAX_CALLS);
     if (!calls.length) break;
     messages.push({ role: "assistant", content: reply.content, tool_calls: calls });
-    for (const call of calls) messages.push({ role: "tool", tool_call_id: call.id, content: await act(call, asked, read, steps) });
+    for (const call of calls) messages.push({ role: "tool", tool_call_id: call.id, content: await act(call, asked, read, steps, endsAt) });
   }
   const tried = steps.filter((s) => s.kind === "tried");
   return { steps, outcome: tried.some((s) => s.ran) ? "copied" : tried.length ? "blocked" : "untried" };
 }
 
 /** Does what the model asked for, as far as this server allows, and says what to tell the model back. */
-async function act(call: ToolCall, asked: Asked, read: Read, steps: Step[]): Promise<string> {
+async function act(call: ToolCall, asked: Asked, read: Read, steps: Step[], endsAt: number): Promise<string> {
   const fingerprint = argOf(call);
   if (call.function.name === "check_card") {
     if (!isFingerprint(fingerprint)) return "That isn't a card fingerprint.";
-    const answer = await read(fingerprint).then(
-      (record) => ({ record }),
-      () => null,
-    );
+    // a registry that hasn't answered by the end of the attempt's time counts as no answer, so the guard refuses
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const answer = await Promise.race([
+      read(fingerprint).then(
+        (record) => ({ record }),
+        () => null,
+      ),
+      new Promise<null>((done) => (timer = setTimeout(() => done(null), Math.max(0, endsAt - Date.now())))),
+    ]);
+    clearTimeout(timer);
     asked.set(fingerprint, answer);
     steps.push({ kind: "asked", fingerprint, answered: answer !== null, record: answer?.record ?? null });
     if (!answer) return "The registry on NEAR didn't answer.";
@@ -149,14 +166,14 @@ export class ModelError extends Error {}
 
 /** A model on NEAR AI Cloud. The key stays on the server: it is only ever put in this request's header. */
 export function nearAi(key: string, model: string, doFetch: typeof fetch = fetch): Model {
-  return async (messages) => {
+  return async (messages, timeoutMs = MODEL_TIMEOUT_MS) => {
     let res: Response;
     try {
       res = await doFetch(MODEL_API, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
         body: JSON.stringify({ model, messages, tools: TOOLS, tool_choice: "auto", max_tokens: 500 }),
-        signal: AbortSignal.timeout(25_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch {
       throw new ModelError("unreachable");

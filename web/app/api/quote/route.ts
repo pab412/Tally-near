@@ -2,7 +2,7 @@ import { answer } from "@/lib/demo";
 import { isFingerprint } from "@/lib/fingerprint";
 import { QuoteError, isSolanaAddress, solQuote } from "@/lib/intents";
 import { limiter } from "@/lib/limit";
-import { verifiedCard } from "@/lib/near";
+import { latestRecord, verifiedCard } from "@/lib/near";
 
 // twenty quotes in ten minutes for one visitor, and 2,000 a day for everyone, on each running copy of the site
 const limit = limiter({ perVisitor: 20, windowMs: 10 * 60_000, perDay: 2_000 });
@@ -22,6 +22,10 @@ export async function GET(request: Request) {
   try {
     const held = await verifiedCard(fingerprint);
     if (!held || held.holdsYocto === "0") return answer({ status: 404, body: { error: "This card holds nothing to quote." } });
+    // the contract only pays out a card the registry still says is Real: a corrected one is burned instead
+    if ((await latestRecord(fingerprint))?.latest.verdict !== "Real") {
+      return answer({ status: 409, body: { error: "NEAR no longer says this card is Real, so what it holds can't be paid out." } });
+    }
     return answer({ status: 200, body: await solQuote(held.holdsYocto, to) });
   } catch (err) {
     return answer({ status: 502, body: { error: err instanceof QuoteError ? err.message : "The card contract couldn't be read. Try again in a moment." } });

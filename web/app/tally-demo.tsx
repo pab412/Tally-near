@@ -56,6 +56,9 @@ export default function TallyDemo({
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
   }, []);
 
+  /** The card whose record is being looked up now. */
+  const asking = useRef("");
+
   /** Asks NEAR about a card: its record on the registry and, when it has one, its verified card. */
   const ask = useCallback(
     async (fp: string): Promise<LookState> => {
@@ -74,15 +77,19 @@ export default function TallyDemo({
   useEffect(() => {
     if (!initialFp) return;
     let live = true;
-    void ask(initialFp).then((state) => live && setLook(state));
+    asking.current = initialFp;
+    void ask(initialFp).then((state) => live && asking.current === initialFp && setLook(state));
     return () => {
       live = false;
     };
   }, [initialFp, ask]);
 
   async function check(fp: string) {
+    asking.current = fp;
     setLook({ phase: "checking" });
-    setLook(await ask(fp));
+    const state = await ask(fp);
+    // a slower answer about a card picked earlier never shows under the card picked since
+    if (asking.current === fp) setLook(state);
   }
 
   async function load(name: string, bytes: ArrayBuffer, preview: string, sample: boolean) {

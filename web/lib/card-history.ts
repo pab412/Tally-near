@@ -67,12 +67,24 @@ const json = (base64: unknown): unknown => {
   }
 };
 
-async function ask<T>(doFetch: typeof fetch, path: string, body: object): Promise<T> {
+/** How long to wait before asking again when the index says it is busy (429) or failed (5xx). */
+const RETRY_MS = [400, 1_200];
+const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+async function ask<T>(doFetch: typeof fetch, path: string, body: object, retryMs = RETRY_MS): Promise<T> {
   let res: Response;
-  try {
-    res = await doFetch(`${INDEX}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(12_000), cache: "no-store" });
-  } catch {
-    throw new HistoryError("the index couldn't be reached");
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await doFetch(`${INDEX}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(12_000), cache: "no-store" });
+    } catch {
+      throw new HistoryError("the index couldn't be reached");
+    }
+    // the public index limits how often it is asked: when it is busy, wait a moment and ask again
+    if ((res.status === 429 || res.status >= 500) && attempt < retryMs.length) {
+      await sleep(retryMs[attempt]);
+      continue;
+    }
+    break;
   }
   if (!res.ok) throw new HistoryError(`the index answered ${res.status}`);
   return (await res.json().catch(() => {
@@ -127,20 +139,54 @@ export function happenedIn(tx: Transaction, contractId: string): Happened[] {
 
 // what a transaction did never changes, so it is read from the index once by each running copy of the site
 const known = new Map<string, Happened[]>();
+/** Transactions being read from the index right now, by the request reading them. */
+const reading = new Map<string, Promise<void>>();
+
+type TxList = { account_txs?: { transaction_hash?: string }[]; resume_token?: string | null };
+/**
+ * How long one copy of the site reuses the contract's list of transactions before asking the index again: long enough
+ * to share it among pages opened in the same moment, short enough that a mint or payment shows on the next visit.
+ */
+const LIST_FOR_MS = 2_000;
+// The list is every card's, so many pages opened at once share one request for it instead of each asking the index,
+// which refuses a burst. Kept per fetch function, so a test's fake index never answers for another's.
+const lists = new WeakMap<typeof fetch, Map<string, { at: number; list: Promise<TxList> }>>();
+
+function contractTxs(doFetch: typeof fetch, contractId: string, retryMs: number[]): Promise<TxList> {
+  let byContract = lists.get(doFetch);
+  if (!byContract) lists.set(doFetch, (byContract = new Map()));
+  const kept = byContract.get(contractId);
+  if (kept && Date.now() - kept.at < LIST_FOR_MS) return kept.list;
+  const list = ask<TxList>(doFetch, "/account", { account_id: contractId, limit: MOST }, retryMs);
+  byContract.set(contractId, { at: Date.now(), list });
+  // a failed answer is never reused (and a late failure never removes a newer list)
+  list.catch(() => byContract.get(contractId)?.list === list && byContract.delete(contractId));
+  return list;
+}
 
 /** A verified card's history, read from the card contract's transactions. Throws HistoryError when the index can't be read. */
-export async function cardHistory(fingerprint: string, opts: { contractId?: string; fetch?: typeof fetch } = {}): Promise<CardHistory> {
+export async function cardHistory(fingerprint: string, opts: { contractId?: string; fetch?: typeof fetch; retryMs?: number[] } = {}): Promise<CardHistory> {
   const contractId = opts.contractId ?? CARD_CONTRACT_ID;
   const doFetch = opts.fetch ?? fetch;
-  const list = await ask<{ account_txs?: { transaction_hash?: string }[]; resume_token?: string | null }>(doFetch, "/account", { account_id: contractId, limit: MOST });
+  const retryMs = opts.retryMs ?? RETRY_MS;
+  const list = await contractTxs(doFetch, contractId, retryMs);
   const hashes = (list.account_txs ?? []).map((row) => row.transaction_hash).filter((h): h is string => typeof h === "string");
 
   const key = (hash: string) => `${contractId}:${hash}`;
-  const unread = hashes.filter((h) => !known.has(key(h)));
+  // a transaction another page is already reading is waited for, not asked for again
+  const unread = hashes.filter((h) => !known.has(key(h)) && !reading.has(key(h)));
   const batches = Array.from({ length: Math.ceil(unread.length / BATCH) }, (_, i) => unread.slice(i * BATCH, (i + 1) * BATCH));
-  for (const { transactions } of await Promise.all(batches.map((tx_hashes) => ask<{ transactions?: Transaction[] }>(doFetch, "/transactions", { tx_hashes })))) {
-    for (const tx of transactions ?? []) if (tx.transaction?.hash) known.set(key(tx.transaction.hash), happenedIn(tx, contractId));
+  for (const tx_hashes of batches) {
+    const batch = ask<{ transactions?: Transaction[] }>(doFetch, "/transactions", { tx_hashes }, retryMs).then(({ transactions }) => {
+      for (const tx of transactions ?? []) if (tx.transaction?.hash) known.set(key(tx.transaction.hash), happenedIn(tx, contractId));
+    });
+    for (const h of tx_hashes) reading.set(key(h), batch);
+    batch.then(
+      () => tx_hashes.forEach((h) => reading.delete(key(h))),
+      () => tx_hashes.forEach((h) => reading.delete(key(h))),
+    );
   }
+  await Promise.all(new Set(hashes.flatMap((h) => reading.get(key(h)) ?? [])));
   if (known.size > 5_000) known.clear();
 
   const events: CardEvent[] = hashes

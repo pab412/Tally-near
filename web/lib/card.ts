@@ -3,7 +3,7 @@
 // on the card contract. Whether a card may be minted, or has to be burned, is the contract's decision, not this
 // server's: it asks the registry on-chain, and its refusals are passed on in its own words.
 
-import { admit, fail, notWritten, refused, type DemoEnv, type Fail, type Signer } from "./demo";
+import { admit, demoMayWrite, fail, notWritten, refused, type DemoEnv, type Fail, type Signer } from "./demo";
 import { isTestnetAccount, type VerifiedCard } from "./near";
 
 export type CardRequest = Signer & { fingerprint: string } & ({ action: "mint"; holder: string } | { action: "recheck" });
@@ -36,6 +36,11 @@ export async function handleCard(body: unknown, env: DemoEnv, sign: SignCard): P
   let request: CardRequest;
   if (input.action === "mint") {
     if (!isTestnetAccount(input.holder)) return fail(422, "The holder has to be a NEAR testnet account, like name.testnet.");
+    // a mint is never for one of Tally's own checks: that card is never minted to whoever asks. (A card with no
+    // record is passed on, and the contract refuses it in its own words.)
+    // (A recheck is open to anyone on the contract, so the demo needs no rule for it.)
+    const notHere = await demoMayWrite(fingerprint, env.read, false);
+    if (notHere) return notHere;
     request = { ...signer, fingerprint, action: "mint", holder: input.holder };
   } else if (input.action === "recheck") {
     request = { ...signer, fingerprint, action: "recheck" };

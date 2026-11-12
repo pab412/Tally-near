@@ -124,6 +124,24 @@ describe("what a visitor types", () => {
     expect(read).toHaveBeenCalledTimes(12);
   });
 
+  it("stops asking once its time is up, so the platform never cuts a run off, and still shows what happened", async () => {
+    const eager = vi.fn<Model>(async () => ({ content: null, tool_calls: [call("copy_trader")] }));
+    const run = await attempt("Again.", eager, says("Fake"), 0);
+    expect(eager).toHaveBeenCalledTimes(1);
+    expect(eager.mock.calls[0][1]).toBe(5_000); // the first turn always runs, with the shortest time a turn is given
+    expect(run.outcome).toBe("blocked");
+    await attempt("Again.", eager, says("Fake"));
+    expect(eager.mock.calls[1][1]).toBe(25_000); // with time to spare, a turn gets the model's full time
+  });
+
+  it("counts a registry that answers after the attempt's time is up as no answer, so the copy is refused", async () => {
+    const slow: Read = () => new Promise((done) => setTimeout(() => done(record("Real")), 50));
+    const model = scripted({ tool_calls: [call("check_card"), call("copy_trader")] });
+    const run = await attempt("Check, then copy.", model, slow, 0);
+    expect(run.steps).toContainEqual(expect.objectContaining({ kind: "asked", answered: false }));
+    expect(run.outcome).toBe("blocked");
+  });
+
   it("gets a plain answer for a tool that doesn't exist or a fingerprint that isn't one", async () => {
     const model = scripted({ tool_calls: [call("send_money"), call("check_card", "the good one"), { id: "x", type: "function", function: { name: "copy_trader", arguments: "not json" } }] });
     const run = await attempt("Try this.", model, says("Real"));

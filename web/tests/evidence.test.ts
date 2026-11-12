@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { callOf, holds, table } from "../scripts/evidence-lib.mjs";
 
 const file = JSON.parse(readFileSync("scripts/evidence-claims.json", "utf8"));
-const evidence = readFileSync("../EVIDENCE.md", "utf8");
+// git on Windows may check the file out with CRLF line endings; the table is compared line for line either way
+const evidence = readFileSync("../EVIDENCE.md", "utf8").replace(/\r\n/g, "\n");
 const sampleFingerprint = (letter: string) => createHash("sha256").update(readFileSync(`public/samples/sample-card-${letter}.png`)).digest("hex");
 
 describe("what counts as a match", () => {

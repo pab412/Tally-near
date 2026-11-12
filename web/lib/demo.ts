@@ -4,6 +4,10 @@
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { isFingerprint } from "./fingerprint";
+import { DEMO_RECORD_FP, type ProofRecord } from "./near";
+
+/** Reads a card's latest record from the registry: null when it has none. */
+export type ReadRecord = (fingerprint: string) => Promise<ProofRecord | null>;
 
 export interface DemoEnv {
   password?: string;
@@ -11,6 +15,45 @@ export interface DemoEnv {
   key?: string;
   contractId: string;
   rpcUrl: string;
+  /** the registry, asked before a write so the demo never writes over a card it must leave alone */
+  read: ReadRecord;
+}
+
+/** The registry the hosted site writes to. Its example cards are kept as they are; a copy run against its own registry may record anything. */
+export const HOSTED_REGISTRY = "proof.notpab.testnet";
+
+/**
+ * Cards the site's own claims stand on: the demo's Fake card (the "try to break it" page's trader) and sample cards
+ * A and B (EVIDENCE.md). On the hosted registry the demo never records over them, so its password can't change what
+ * those pages show.
+ */
+export const KEPT_CARDS: ReadonlySet<string> = new Set([
+  DEMO_RECORD_FP,
+  "776b729a98a45576e4381c7732d4b0eafcbec4eecc114c79116d9a7002258dbe", // public/samples/sample-card-a.png
+  "3171ca6c47b50b2218cc76275f573aa1670479e2ae2eada69c00f20236599e58", // public/samples/sample-card-b.png
+]);
+
+/**
+ * Whether the demo may write about this card. The registry and the card contract act on a card's latest entry,
+ * whoever wrote it, so a demo entry on top of one of Tally's own checks would change that card's verdict. The demo
+ * only writes about cards whose latest entry is its own (`sample-`), or that have none. Null when it may. The registry
+ * is read just before the write, so an entry Tally makes in the same second can still be missed: this is a check, not
+ * a lock (THREAT-MODEL.md).
+ */
+export async function demoMayWrite(fingerprint: string, read: ReadRecord, keepExamples: boolean): Promise<Fail | null> {
+  if (keepExamples && KEPT_CARDS.has(fingerprint)) {
+    return fail(409, "This card is one of the site's own examples, so the demo leaves its record as it is. Record Sample C or a picture of your own.");
+  }
+  let record: ProofRecord | null;
+  try {
+    record = await read(fingerprint);
+  } catch {
+    return fail(502, "NEAR couldn't be asked about this card just now. Try again in a moment.");
+  }
+  if (record && !record.latest.check_id.startsWith("sample-")) {
+    return fail(409, "Tally has checked this card itself, so the demo can't write about it.");
+  }
+  return null;
 }
 
 export interface Fail {

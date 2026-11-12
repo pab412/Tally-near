@@ -30,7 +30,10 @@ export default function SolanaQuote({ fingerprint, holds }: { fingerprint: strin
     try {
       const res = await fetch(`/api/quote?fp=${fingerprint}&to=${encodeURIComponent(to.trim())}`);
       const body = await res.json().catch(() => ({}));
-      setState(res.ok && isFresh(body) ? { phase: "quoted", quote: body } : { phase: "error", message: body.error ?? "That didn't work. Try again." });
+      // the minute a quote is good for is counted from when this browser got it: the visitor's clock and the
+      // server's can disagree by seconds or minutes, so the server's own time is never compared with this one
+      const quote = res.ok && typeof body.sol === "string" ? { ...body, atMs: Date.now() } : null;
+      setState(quote && isFresh(quote) ? { phase: "quoted", quote } : { phase: "error", message: body.error ?? "That didn't work. Try again." });
     } catch {
       setState({ phase: "error", message: "Couldn't reach the server. Check your connection and try again." });
     }
