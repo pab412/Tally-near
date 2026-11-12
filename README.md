@@ -75,6 +75,7 @@ An agent can follow the same steps from one file: [tally-near.vercel.app/SKILL.m
 | Guard wallet (an example) | `contracts/guard` | 20 unit tests pass, and the whole flow passes on testnet in the same run. It asks the registry before it pays, and only a Real card's holder is paid. Live on testnet at [`tally-guard.testnet`](https://testnet.nearblocks.io/address/tally-guard.testnet). Not a product people hold money in. |
 | Guard demo | `web/scripts/demo-guard.mjs` | One command. An agent with a key that can only call `pay` asks the guard wallet to pay three traders. One is paid, two are refused, and each prints its transaction. |
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
+| Plug-in for Claude Code and Codex | `mcp` | An MCP server with three free reads: `check_card`, `card_history` and `fingerprint_file`. No key, nothing paid, nothing written. 10 tests pass, and `node try.mjs` asks NEAR for real. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, the allow / warn / block rule, and how the paid check talks to the card contract. 8 unit tests pass. |
 | Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 118 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
@@ -283,6 +284,30 @@ It runs against `tally-guard.testnet` (`GUARD_CONTRACT=<account>` points it at a
 6. The owner removes the agent's key and takes back what's left.
 
 It is a script, not an AI, so the fooled agent in step 5 is acted out.
+
+## The plug-in for Claude Code and Codex
+
+`mcp` is a small MCP server, so an AI coding agent can ask Tally directly whether a card is real. Three tools, all free reads from NEAR: no account, no key, nothing paid and nothing written.
+
+- `check_card(fingerprint)`: allow, warn or block, with the reasons from the card's record. A registry that doesn't answer is a block.
+- `card_history(fingerprint)`: every verdict the card has had, oldest first.
+- `fingerprint_file(path)`: the fingerprint of a picture file on your computer. The file never leaves it.
+
+Add it (needs Node 20.9 or newer):
+
+```
+cd mcp
+npm install
+claude mcp add --transport stdio tally-near -- node "$(pwd)/server.mjs"
+```
+
+For Codex, the last line is `codex mcp add tally-near -- node "$(pwd)/server.mjs"`.
+
+Then ask: "Is card 776b729a98a45576e4381c7732d4b0eafcbec4eecc114c79116d9a7002258dbe real?" You should get allow: NEAR says Real, with 2 entries, first recorded Fake and then corrected to Real.
+
+Without either tool, `node try.mjs` in the same folder starts the server the way they would and asks it about sample card A. `npm test` there should end `pass 10`.
+
+It reads through the site's own code: one read (`web/scripts/near-read.mjs`) and one rule (`web/scripts/agent-rule.mjs`), so an agent asking here gets the answer the site gives.
 
 ## The demo page
 

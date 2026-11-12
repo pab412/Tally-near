@@ -3,8 +3,9 @@
 import { Account, JsonRpcProvider, KeyPair, KeyPairSigner } from "near-api-js";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { RPC_URL, view as read } from "./near-read.mjs";
 
-export const provider = new JsonRpcProvider({ url: "https://rpc.testnet.fastnear.com" });
+export const provider = new JsonRpcProvider({ url: RPC_URL });
 const KEPT = new URL("../.demo-agent.json", import.meta.url);
 
 /** A card recorded Fake on proof.notpab.testnet. */
@@ -13,10 +14,7 @@ export const FAKE = "cab484af6173d22914dcb29a6b5911c0671c33fdd0ef84bfdac8fed23be
 export const sample = (letter) => createHash("sha256").update(readFileSync(new URL(`../public/samples/sample-card-${letter}.png`, import.meta.url))).digest("hex");
 
 /** One free read of a contract. */
-export const view = async (contractId, method, args = {}) => {
-  const r = await provider.callFunctionRaw({ contractId, method, args, blockQuery: { finality: "optimistic" } });
-  return JSON.parse(Buffer.from(r.result).toString());
-};
+export const view = (contractId, method, args = {}) => read(contractId, method, args);
 export const short = (fp) => `${fp.slice(0, 8)}…${fp.slice(-8)}`;
 export const say = (line = "") => console.log(line);
 export const stop = (line) => { console.error(line); process.exit(1); };

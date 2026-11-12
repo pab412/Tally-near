@@ -1,6 +1,7 @@
 // Reading Tally's contracts on NEAR testnet: the proof registry and the verified card. Lookups go straight from the
 // browser to a public NEAR RPC node: no server, no wallet, no key.
 
+import { NearReadError, RPC_URL as PUBLIC_RPC, view, viewRequest as request } from "@/scripts/near-read.mjs";
 import { isFingerprint } from "./fingerprint";
 
 export const VERDICTS = ["Real", "Unclear", "Fake"] as const;
@@ -55,7 +56,7 @@ export const CARD_CONTRACT_ID = process.env.NEXT_PUBLIC_CARD_CONTRACT_ID || "car
 export const CHECK_CONTRACT_ID = process.env.NEXT_PUBLIC_CHECK_CONTRACT_ID || "check.notpab.testnet";
 /** The guard wallet (contracts/guard): an example wallet that asks the registry before it pays. */
 export const GUARD_CONTRACT_ID = process.env.NEXT_PUBLIC_GUARD_CONTRACT_ID || "tally-guard.testnet";
-export const RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC || "https://rpc.testnet.fastnear.com";
+export const RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC || PUBLIC_RPC;
 /**
  * Where the ledger reads the list of Tally's own real checks (fingerprints and counts only, lib/ledger.ts tallyChecks):
  * this site's own route, which asks tallypnl.com. The browser still talks to this site and NEAR, nothing else.
@@ -76,50 +77,28 @@ export interface NearOptions {
 }
 
 /**
- * The JSON-RPC request that reads a contract. This site sends exactly this, and the For AI agents page prints it, so
- * what an agent is shown is what works.
+ * The JSON-RPC request that reads a contract (scripts/near-read.mjs). This site sends exactly this, and the For AI
+ * agents page prints it, so what an agent is shown is what works.
  */
-export function viewRequest(method: string, args: object, contractId: string) {
-  return {
-    jsonrpc: "2.0",
-    id: "tally",
-    method: "query",
-    params: {
-      request_type: "call_function",
-      finality: "optimistic", // the newest block, so a record shows up the moment it is written
-      account_id: contractId,
-      method_name: method,
-      args_base64: btoa(JSON.stringify(args)),
-    },
-  };
-}
+export const viewRequest = (method: string, args: object, contractId: string) => request(method, args, contractId);
 
 /** The same request as a command to paste into a terminal: what the For AI agents page gives a developer to copy. */
 export const curlFor = (method: string, args: object, contractId: string) =>
   `curl -s ${RPC_URL} \\\n  -H 'content-type: application/json' \\\n  -d '${JSON.stringify(viewRequest(method, args, contractId))}'`;
 
+const NOT_READ = {
+  unreachable: "Couldn't reach NEAR. Check your connection and try again.",
+  refused: "NEAR didn't answer. Try again in a moment.",
+  unreadable: "NEAR couldn't read the contract. Try again in a moment.",
+};
+
 /** Calls a read-only contract function and returns its JSON result. */
 export async function viewCall<T>(method: string, args: object, opts: NearOptions = {}): Promise<T> {
-  const doFetch = opts.fetch ?? fetch;
-  let res: Response;
   try {
-    res = await doFetch(opts.rpcUrl ?? RPC_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(viewRequest(method, args, opts.contractId ?? CONTRACT_ID)),
-      signal: AbortSignal.timeout(10_000),
-    });
-  } catch {
-    throw new LookupError("Couldn't reach NEAR. Check your connection and try again.");
+    return (await view(opts.contractId ?? CONTRACT_ID, method, args, { rpcUrl: opts.rpcUrl ?? RPC_URL, fetch: opts.fetch })) as T;
+  } catch (err) {
+    throw new LookupError(NOT_READ[err instanceof NearReadError ? err.why : "unreadable"]);
   }
-  if (!res.ok) throw new LookupError("NEAR didn't answer. Try again in a moment.");
-
-  const json = await res.json().catch(() => null);
-  const bytes = json?.result?.result;
-  if (json?.error || json?.result?.error || !Array.isArray(bytes)) {
-    throw new LookupError("NEAR couldn't read the contract. Try again in a moment.");
-  }
-  return JSON.parse(new TextDecoder().decode(Uint8Array.from(bytes))) as T;
 }
 
 /** A card's record on the registry: its latest verdict and how many entries it has. Null when Tally never checked it. */

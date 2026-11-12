@@ -6,6 +6,7 @@
 //      node scripts/evidence.mjs --table    print EVIDENCE.md's table
 import { readFileSync } from "node:fs";
 import { callOf, holds, table } from "./evidence-lib.mjs";
+import { view as read } from "./near-read.mjs";
 
 const file = JSON.parse(readFileSync(new URL("./evidence-claims.json", import.meta.url), "utf8"));
 if (process.argv.includes("--table")) {
@@ -13,18 +14,8 @@ if (process.argv.includes("--table")) {
   process.exit(0);
 }
 
-/** One free read of a contract. Throws when NEAR doesn't answer. */
-async function view(contractId, method, args) {
-  const res = await fetch(file.rpc, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "query", params: { request_type: "call_function", finality: "final", account_id: contractId, method_name: method, args_base64: Buffer.from(JSON.stringify(args ?? {})).toString("base64") } }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  const body = await res.json();
-  if (!body.result?.result) throw new Error(body.error?.cause?.name ?? body.error?.message ?? "no answer");
-  return JSON.parse(Buffer.from(body.result.result).toString());
-}
+/** One free read of a contract, from a block NEAR has finalised. Throws when NEAR doesn't answer. */
+const view = (contractId, method, args) => read(contractId, method, args, { rpcUrl: file.rpc, finality: "final", timeoutMs: 20_000 });
 
 let matched = 0;
 console.log(`Checking ${file.claims.length} claims on NEAR ${file.network} (${file.rpc})\n`);
