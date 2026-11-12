@@ -8,7 +8,8 @@
 //   - a request that arrives twice (Tally retries when it hears nothing back) writes once: the registry is asked
 //     first, and an entry that is already the card's latest is answered without signing anything.
 
-import { fail, notWritten, onTestnet, samePassword, type Fail } from "./demo";
+import { TOO_MANY_GUESSES, fail, notWritten, onTestnet, samePassword, type Fail } from "./demo";
+import { GUESSES, type Guesses } from "./limit";
 import { isFingerprint } from "./fingerprint";
 import { VERDICTS, type ProofRecord, type Verdict } from "./near";
 import type { Sign } from "./record";
@@ -19,6 +20,10 @@ export interface AttestEnv {
   key?: string;
   contractId: string;
   rpcUrl: string;
+  /** the caller's address, for the cap on wrong secrets only */
+  address: string;
+  /** the count of wrong secrets: the site-wide one unless a test gives its own */
+  guesses?: Guesses;
 }
 
 /** `txHash` is null when the entry was already on record and nothing was written. */
@@ -34,7 +39,12 @@ export const SAMPLE_MARK = "sample-";
 export async function handleAttest(body: unknown, bearer: string | null, env: AttestEnv, sign: Sign, latest: Latest): Promise<AttestResult> {
   if (!env.secret || !env.account || !env.key) return fail(503, "Tally's own checks are switched off on this copy of the page.");
   if (!onTestnet(env.account, env.contractId)) return fail(503, "This site only writes to NEAR testnet.");
-  if (!bearer || !samePassword(bearer, env.secret)) return fail(401, "Not allowed.");
+  const guesses = env.guesses ?? GUESSES;
+  if (guesses.blocked(env.address)) return fail(429, TOO_MANY_GUESSES);
+  if (!bearer || !samePassword(bearer, env.secret)) {
+    guesses.missed(env.address);
+    return fail(401, "Not allowed.");
+  }
 
   const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
   const { fingerprint, verdict, check_id: checkId } = input;

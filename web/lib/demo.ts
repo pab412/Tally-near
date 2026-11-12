@@ -4,6 +4,7 @@
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { isFingerprint } from "./fingerprint";
+import { GUESSES, type Guesses } from "./limit";
 import { DEMO_RECORD_FP, type ProofRecord } from "./near";
 
 /** Reads a card's latest record from the registry: null when it has none. */
@@ -17,6 +18,10 @@ export interface DemoEnv {
   rpcUrl: string;
   /** the registry, asked before a write so the demo never writes over a card it must leave alone */
   read: ReadRecord;
+  /** the visitor's address, for the cap on wrong passwords only */
+  address: string;
+  /** the count of wrong passwords: the site-wide one unless a test gives its own */
+  guesses?: Guesses;
 }
 
 /** The registry the hosted site writes to. Its example cards are kept as they are; a copy run against its own registry may record anything. */
@@ -74,6 +79,9 @@ export function samePassword(given: string, expected: string): boolean {
   return timingSafeEqual(a, b);
 }
 
+/** What a visitor who has guessed the password wrong too often is told, by every route that checks one. */
+export const TOO_MANY_GUESSES = "Too many wrong passwords. Wait a few minutes and try again.";
+
 /** Every write this site signs, the demo's and Tally's own, goes to testnet and nowhere else. */
 export const onTestnet = (account: string, contractId: string) => account.endsWith(".testnet") && contractId.endsWith(".testnet");
 
@@ -95,8 +103,11 @@ export interface Admitted {
 export function admit(body: unknown, env: DemoEnv, off: string): Admitted | Fail {
   if (!writesEnabled(env)) return fail(503, off);
   if (!onTestnet(env.account!, env.contractId)) return fail(503, "This demo only writes to NEAR testnet.");
+  const guesses = env.guesses ?? GUESSES;
+  if (guesses.blocked(env.address)) return fail(429, TOO_MANY_GUESSES);
   const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
   if (typeof input.password !== "string" || !samePassword(input.password, env.password!)) {
+    guesses.missed(env.address);
     return fail(401, "Wrong password.");
   }
   if (!isFingerprint(input.fingerprint)) return fail(422, "That isn't a card fingerprint.");

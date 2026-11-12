@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleCard, type SignCard } from "@/lib/card";
 import type { DemoEnv } from "@/lib/demo";
+import { guessLimiter } from "@/lib/limit";
 import { checkTerms, isTestnetAccount, toVerifiedCard, verifiedCard } from "@/lib/near";
 
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
@@ -11,6 +12,8 @@ const ENV: DemoEnv = {
   contractId: "card.attester.testnet",
   rpcUrl: "https://rpc.example",
   read: async () => null,
+  address: "203.0.113.7",
+  guesses: guessLimiter({ perVisitor: 1_000, windowMs: 60_000 }),
 };
 const mint = { password: "sample-password", fingerprint: FP, action: "mint", holder: "sample-trader.testnet" };
 const CARD = { fingerprint: FP, holder: "sample-trader.testnet", mintedAtMs: 1, checkId: "sample-a1", holdsYocto: "0" };

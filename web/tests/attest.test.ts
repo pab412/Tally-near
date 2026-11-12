@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { handleAttest, type AttestEnv, type Latest } from "@/lib/attest";
+import { guessLimiter } from "@/lib/limit";
 import type { ProofRecord, Verdict } from "@/lib/near";
 import type { Sign } from "@/lib/record";
 
@@ -10,6 +11,8 @@ const ENV: AttestEnv = {
   key: "ed25519:SAMPLEKEYNOTREAL",
   contractId: "proof.attester.testnet",
   rpcUrl: "https://rpc.example",
+  address: "203.0.113.7",
+  guesses: guessLimiter({ perVisitor: 1_000, windowMs: 60_000 }),
 };
 const good = { fingerprint: FP, verdict: "Real", check_id: "tally-41" };
 const record = (verdict: Verdict, checkId: string, entries = 1): ProofRecord => ({ fingerprint: FP, latest: { verdict, check_id: checkId, recorded_at_ms: 1 }, entries });
@@ -90,5 +93,13 @@ describe("Tally's own checks", () => {
     expect(unread.status).toBe(502);
     expect(JSON.stringify([res, unread])).not.toContain("SAMPLEKEYNOTREAL");
     log.mockRestore();
+  });
+
+  it("stops a caller who keeps guessing the secret, even once they guess it", async () => {
+    const sign = signer();
+    const env = { ...ENV, guesses: guessLimiter({ perVisitor: 10, windowMs: 60_000 }) };
+    for (let i = 0; i < 10; i++) expect((await handleAttest(good, `guess-${i}`, env, sign, none)).status).toBe(401);
+    expect((await handleAttest(good, ENV.secret!, env, sign, none)).status).toBe(429);
+    expect(sign).not.toHaveBeenCalled();
   });
 });

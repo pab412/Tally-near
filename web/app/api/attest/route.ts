@@ -1,5 +1,6 @@
 import { handleAttest } from "@/lib/attest";
 import { answer, readBody } from "@/lib/demo";
+import { addressOf } from "@/lib/limit";
 import { CONTRACT_ID, RPC_URL, latestRecord } from "@/lib/near";
 import { signWithNear } from "@/lib/sign";
 
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
     key: process.env.NEAR_ATTESTER_KEY,
     contractId: CONTRACT_ID,
     rpcUrl: RPC_URL,
+    address: addressOf(request),
   };
   const bearer = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1] ?? null;
   const latest = (fingerprint: string) => latestRecord(fingerprint, { contractId: CONTRACT_ID, rpcUrl: RPC_URL });

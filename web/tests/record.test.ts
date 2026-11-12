@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { HOSTED_REGISTRY, KEPT_CARDS, type DemoEnv } from "@/lib/demo";
+import { guessLimiter } from "@/lib/limit";
 import { DEMO_RECORD_FP } from "@/lib/near";
 import { sampleFingerprints } from "@/lib/sample";
 import { handleRecord, newCheckId, type Sign } from "@/lib/record";
@@ -12,6 +13,8 @@ const ENV: DemoEnv = {
   contractId: "proof.attester.testnet",
   rpcUrl: "https://rpc.example",
   read: async () => null,
+  address: "203.0.113.7",
+  guesses: guessLimiter({ perVisitor: 1_000, windowMs: 60_000 }),
 };
 const good = { password: "sample-password", fingerprint: FP, verdict: "Fake" };
 
@@ -94,5 +97,17 @@ describe("record route", () => {
     const id = newCheckId();
     expect(id).toMatch(/^sample-[a-z0-9]{8}$/);
     expect(id.length).toBeLessThanOrEqual(32);
+  });
+
+  it("stops a visitor who keeps guessing the password, even once they guess it, and nobody else", async () => {
+    const sign = okSigner();
+    const env = { ...ENV, guesses: guessLimiter({ perVisitor: 10, windowMs: 60_000 }) };
+    for (let i = 0; i < 3; i++) expect((await handleRecord(good, env, sign, () => "sample-abc12345")).status, "the right password never counts").toBe(200);
+    for (let i = 0; i < 10; i++) expect((await handleRecord({ ...good, password: `guess-${i}` }, env, sign)).status).toBe(401);
+    const right = await handleRecord(good, env, sign);
+    expect(right.status).toBe(429);
+    expect(right.body).toEqual({ error: "Too many wrong passwords. Wait a few minutes and try again." });
+    expect(sign).toHaveBeenCalledTimes(3);
+    expect((await handleRecord(good, { ...env, address: "198.51.100.9" }, sign, () => "sample-abc12345")).status).toBe(200);
   });
 });

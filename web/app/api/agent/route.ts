@@ -1,6 +1,6 @@
 import { handleAgent } from "@/lib/break-it";
 import { answer, readBody } from "@/lib/demo";
-import { limiter } from "@/lib/limit";
+import { addressOf, limiter } from "@/lib/limit";
 import { CONTRACT_ID, RPC_URL, latestRecord } from "@/lib/near";
 
 // the model is asked up to four times in one attempt
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const env = {
     key: process.env.NEARAI_API_KEY,
     model: process.env.NEARAI_MODEL,
-    address: request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown",
+    address: addressOf(request),
     sameSite: !origin || (URL.canParse(origin) && new URL(origin).host === request.headers.get("host")),
   };
   const read = (fingerprint: string) => latestRecord(fingerprint, { contractId: CONTRACT_ID, rpcUrl: RPC_URL });

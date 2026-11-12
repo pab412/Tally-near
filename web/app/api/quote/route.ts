@@ -1,7 +1,7 @@
 import { answer } from "@/lib/demo";
 import { isFingerprint } from "@/lib/fingerprint";
 import { QuoteError, isSolanaAddress, solQuote } from "@/lib/intents";
-import { limiter } from "@/lib/limit";
+import { addressOf, limiter } from "@/lib/limit";
 import { latestRecord, verifiedCard } from "@/lib/near";
 
 // twenty quotes in ten minutes for one visitor, and 2,000 a day for everyone, on each running copy of the site
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const to = searchParams.get("to");
   if (!isFingerprint(fingerprint)) return answer({ status: 422, body: { error: "That isn't a card fingerprint." } });
   if (!isSolanaAddress(to)) return answer({ status: 422, body: { error: "That isn't a Solana address." } });
-  const address = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const address = addressOf(request);
   if (limit(address) !== "ok") return answer({ status: 429, body: { error: "That's a lot of quotes. Wait a few minutes and try again." } });
   try {
     const held = await verifiedCard(fingerprint);
