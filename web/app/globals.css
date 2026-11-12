@@ -425,3 +425,10 @@ button.ledger-row:hover,button.ledger-row[aria-expanded=true]{background:rgba(25
 .log-what svg{width:16px;height:16px;margin:0 8px -3px 0;color:var(--tone)}
 .log-detail{margin-top:2px!important;color:var(--text-secondary);font-size:.875rem;line-height:1.5}
 @media(max-width:940px){.attempt{grid-template-columns:1fr;padding-top:32px}}
+
+/* a verified card's own page: what the contract holds beside its picture, then its history */
+.card-page{padding-top:48px}
+.card-page .badge-art img{max-width:none}
+.card-events{margin-top:32px}
+.card-source{margin:24px 0 0;max-width:78ch;font-size:.875rem;line-height:1.5}
+.log-who time{font-variant-numeric:tabular-nums}

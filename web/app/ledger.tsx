@@ -7,7 +7,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
-import { badgePath, DEMO_PATH, isFingerprint, recordPath } from "@/lib/fingerprint";
+import { badgePath, cardPath, DEMO_PATH, isFingerprint, recordPath } from "@/lib/fingerprint";
 import {
   entriesOf,
   findCard,
@@ -538,9 +538,10 @@ function BadgeRow({
             </Fact>
           </dl>
           <p className="ledger-act">
-            <Link className="btn-secondary" href={recordPath(fp)}>
-              Open this record in the demo
+            <Link className="btn-secondary" href={cardPath(fp)}>
+              Its history: paid in, paid out, holders
             </Link>
+            <Link href={recordPath(fp)}>Open this record in the demo</Link>
           </p>
         </div>
       </div>

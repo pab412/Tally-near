@@ -18,5 +18,8 @@ export function fingerprintFromParam(value: string | string[] | undefined | null
 /** The link that opens a card's record directly: what a Tally card's QR code points to. */
 export const recordPath = (fp: string) => `${DEMO_PATH}?fp=${fp}`;
 
+/** A verified card's own page: who holds it and its history. */
+export const cardPath = (fp: string) => `/card/${fp}`;
+
 /** A verified card's picture link: the same one the card contract gives the token (`badge/<fingerprint>.png`). */
 export const badgePath = (fp: string) => `/badge/${fp}.png`;
