@@ -31,6 +31,38 @@ export const PAID_METHODS: readonly { call: string; method: string; who: string;
   { call: "terms()", method: "terms", who: "Anyone, free", what: "The fee, the trader's share and how many checks were answered." },
 ];
 
+/** The guard wallet's methods (contracts/guard), in the order an owner and their agent use them. */
+export const GUARD_METHODS: readonly { call: string; method: string; who: string; what: string }[] = [
+  { call: "deposit(limit)", method: "deposit", who: "The owner", what: "Loads the attached NEAR into the caller's own wallet and sets the most one payment may be." },
+  { call: "pay(fingerprint, amount)", method: "pay", who: "The agent", what: "Asks the registry about the card first. Its holder is paid only if the answer is Real. Anything else is refused, with why." },
+  { call: "refund()", method: "refund", who: "The owner", what: "Sends back what the caller's wallet still holds." },
+  { call: "wallet_of(account_id)", method: "wallet_of", who: "Anyone, free", what: "What an account's wallet holds, and its limit." },
+];
+
+/**
+ * What a wallet adds to ask the registry before it pays: the lines that matter from contracts/guard, shortened.
+ * tests/agent-api.test.ts checks each name in it against the contracts.
+ */
+export const WALLET_CODE = `use tally_types::{decide, proof_registry, Decision, Record};
+
+// before any money moves, ask the registry about the card
+pub fn pay(&mut self, fingerprint: String, amount: U128) -> Promise {
+    proof_registry::ext(self.registry.clone())
+        .get(fingerprint.clone())
+        .then(Self::ext(env::current_account_id()).on_asked(fingerprint, amount))
+}
+
+#[private]
+pub fn on_asked(&mut self, fingerprint: String, amount: U128,
+    #[callback_result] record: Result<Option<Record>, PromiseError>) {
+    // no answer is no record, and both are a block
+    match decide(record.ok().flatten().as_ref()) {
+        Decision::Allow => { /* pay the card's holder */ }
+        Decision::Warn => { /* stop: ask the owner */ }
+        Decision::Block => { /* refuse */ }
+    }
+}`;
+
 /** The fields of what `check` answers (the contract's `Answer`). */
 export const ANSWER_FIELDS: readonly { field: string; what: string }[] = [
   { field: "record", what: "The card's record, exactly as the registry gives it to anyone. null when Tally never checked the card." },

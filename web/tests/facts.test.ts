@@ -11,6 +11,7 @@ describe("the test counts the pages state", () => {
     expect(row("contracts/proof")).toContain(`${CONTRACT_TESTS.proof} unit tests pass`);
     expect(row("contracts/card")).toContain(`${CONTRACT_TESTS.card} unit tests pass`);
     expect(row("contracts/check")).toContain(`${CONTRACT_TESTS.check} unit tests pass`);
+    expect(row("contracts/guard")).toContain(`${CONTRACT_TESTS.guard} unit tests pass`);
   });
 
   it("count the checks the end-to-end script runs on testnet", () => {

@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { ANSWER_FIELDS, ERRORS, PAID_METHODS, READ_METHODS, readArgs } from "@/lib/agent-api";
+import { ANSWER_FIELDS, ERRORS, GUARD_METHODS, PAID_METHODS, READ_METHODS, WALLET_CODE, readArgs } from "@/lib/agent-api";
 import { CHECK_CONTRACT_ID, CONTRACT_ID, RPC_URL, curlFor, viewRequest } from "@/lib/near";
 
 const source = {
   proof: readFileSync("../contracts/proof/src/lib.rs", "utf8"),
   check: readFileSync("../contracts/check/src/lib.rs", "utf8"),
 };
+const guard = readFileSync("../contracts/guard/src/lib.rs", "utf8");
+const types = readFileSync("../contracts/types/src/lib.rs", "utf8");
 const FP = "ab".repeat(32);
 
 describe("the For AI agents page's developer half", () => {
@@ -44,6 +46,30 @@ describe("the For AI agents page's developer half", () => {
   it("quotes each refusal in the contract's own words", () => {
     expect(ERRORS.length).toBeGreaterThan(5);
     for (const { contract, says } of ERRORS) expect(source[contract], says).toContain(`"${says}"`);
+  });
+});
+
+describe("the For AI agents page's wallet builders part", () => {
+  it("only lists guard wallet methods the contract has, with the arguments it takes", () => {
+    for (const { call, method } of GUARD_METHODS) {
+      const takes = call.slice(call.indexOf("(") + 1, -1).split(", ").filter(Boolean);
+      const declared = new RegExp(`pub fn ${method}\\(&(mut )?self(, [^)]*)?\\)`).exec(guard)?.[0] ?? "";
+      expect(declared, method).not.toBe("");
+      expect([...declared.matchAll(/(\w+): /g)].map((m) => m[1]), call).toEqual(takes);
+    }
+  });
+
+  it("shows code that uses the names the contracts really have", () => {
+    for (const name of ["decide", "proof_registry", "Decision", "Record"]) {
+      expect(WALLET_CODE, name).toContain(name);
+      expect(types, name).toMatch(new RegExp(`pub (fn|enum|struct|trait) ${name}\\b|ext_contract\\(${name}\\)`));
+    }
+    for (const arm of ["Decision::Allow", "Decision::Warn", "Decision::Block"]) expect(WALLET_CODE).toContain(arm);
+    // the same call the guard makes: ask the registry, then decide in a callback only the contract can call
+    for (const line of ["proof_registry::ext(self.registry.clone())", ".get(fingerprint.clone())", "#[private]", "pub fn on_asked("]) {
+      expect(WALLET_CODE, line).toContain(line);
+      expect(guard, line).toContain(line);
+    }
   });
 });
 

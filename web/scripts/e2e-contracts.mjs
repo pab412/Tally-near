@@ -1,20 +1,21 @@
-// End-to-end test of the three contracts on NEAR testnet: what unit tests can't cover, contracts calling each other.
+// End-to-end test of the contracts on NEAR testnet: what unit tests can't cover, contracts calling each other.
 // The card contract asks the proof registry before it mints, keeps or pays out a card; the paid check asks both,
-// charges an agent's credit and pays the trader's verified card. It creates sub-accounts of the account you give it,
-// deploys the contracts there and runs the whole flow for real, including an agent whose key can only pay for checks.
+// charges an agent's credit and pays the trader's verified card; the guard wallet asks both and pays a Real card's
+// holder or refuses. It creates sub-accounts of the account you give it, deploys the contracts there and runs the
+// whole flow for real, including an agent whose key can only pay for checks.
 //
-// Run: node scripts/e2e-contracts.mjs <account.json> <tally_proof.wasm> <tally_card.wasm> <tally_check.wasm>
+// Run: node scripts/e2e-contracts.mjs <account.json> <tally_proof.wasm> <tally_card.wasm> <tally_check.wasm> <tally_guard.wasm>
 //   account.json: {"id":"<you>.testnet","pub":"ed25519:...","key":"ed25519:..."} for a THROWAWAY testnet account with
 //   about 8 NEAR. Never a real key. Build the .wasm files with cargo-near (README, "Build and deploy").
-//   TAG=x picks the sub-account names (proofx.<you>, cardx.<you>, checkx.<you>, agentx.<you>). MODE=redeploy puts new
+//   TAG=x picks the sub-account names (proofx.<you>, cardx.<you>, checkx.<you>, guardx.<you>, agentx.<you>). MODE=redeploy puts new
 //   code on accounts an earlier run made; MODE=skip only runs the checks.
 import { Account, JsonRpcProvider, KeyPair, KeyPairSigner, getTransactionLastResult, teraToGas, nearToYocto } from "near-api-js";
 import { readFileSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
 
-const [, , acctFile, proofWasm, cardWasm, checkWasm] = process.argv;
-if (!acctFile || !proofWasm || !cardWasm || !checkWasm) {
-  console.error("Run: node scripts/e2e-contracts.mjs <account.json> <tally_proof.wasm> <tally_card.wasm> <tally_check.wasm>");
+const [, , acctFile, proofWasm, cardWasm, checkWasm, guardWasm] = process.argv;
+if (!acctFile || !proofWasm || !cardWasm || !checkWasm || !guardWasm) {
+  console.error("Run: node scripts/e2e-contracts.mjs <account.json> <tally_proof.wasm> <tally_card.wasm> <tally_check.wasm> <tally_guard.wasm>");
   process.exit(2);
 }
 const root = JSON.parse(readFileSync(acctFile, "utf8"));
@@ -27,7 +28,7 @@ const signer = KeyPairSigner.fromSecretKey(root.key);
 const acct = (id) => new Account(id, provider, signer);
 const R = acct(root.id);
 const tag = process.env.TAG || Date.now().toString(36).slice(-5);
-const PROOF = `proof${tag}.${root.id}`, CARD = `card${tag}.${root.id}`, CHECK = `check${tag}.${root.id}`, AGENT = `agent${tag}.${root.id}`;
+const PROOF = `proof${tag}.${root.id}`, CARD = `card${tag}.${root.id}`, CHECK = `check${tag}.${root.id}`, GUARD = `guard${tag}.${root.id}`, AGENT = `agent${tag}.${root.id}`;
 const FEE = nearToYocto("0.01"), HALF = FEE / 2n; // one check, and the trader's 50% of it
 const PICTURES = "https://tally-near.vercel.app"; // where a card's picture link starts
 const fp = () => createHash("sha256").update(randomBytes(32)).digest("hex");
@@ -54,6 +55,7 @@ if (mode !== "skip") {
     [PROOF, proofWasm, "1.8", { attester: root.id }],
     [CARD, cardWasm, "2.7", { attester: root.id, registry: PROOF, pictures: PICTURES }],
     [CHECK, checkWasm, "2.1", { owner: root.id, registry: PROOF, cards: CARD, fee: FEE.toString(), trader_percent: 50 }],
+    [GUARD, guardWasm, "1.9", { registry: PROOF, cards: CARD }],
   ]) {
     if (mode === "create") await R.createSubAccount({ accountOrPrefix: id, publicKey: root.pub, nearToTransfer: nearToYocto(near) });
     const d = await acct(id).deployContract(readFileSync(wasm));
@@ -94,7 +96,8 @@ await call(R, PROOF, "record", { fingerprint: A, verdict: "Fake", check_id: "e2e
 const r2 = await call(acct(PROOF), CARD, "recheck", { fingerprint: A });
 ok("a recheck burns a card whose verdict was corrected", getTransactionLastResult(r2) === false, gasOf(r2));
 ok("the burn logged the standard event", JSON.stringify(r2.receipts_outcome.map((r) => r.outcome.logs)).includes("nft_burn"));
-ok("the card is gone", (await view(CARD, "nft_token", { token_id: A })) === null && (await view(CARD, "nft_total_supply")) === "0");
+// (a read straight after a call can still show the block before it)
+ok("the card is gone", await until(async () => (await view(CARD, "nft_token", { token_id: A })) === null && (await view(CARD, "nft_total_supply")) === "0"));
 
 // with only the gas the demo page attaches
 await call(R, PROOF, "record", { fingerprint: C, verdict: "Real", check_id: "e2e-c" });
@@ -165,5 +168,45 @@ const col = await call(R, CHECK, "collect", {});
 ok("the contract's owner collects its share and nothing else", getTransactionLastResult(col) === mine && (await view(CHECK, "takings")) === "0", mine);
 await mustFail("nobody else can collect", "Only the owner", () => call(acct(AGENT), CHECK, "collect", {}));
 
-console.log(failed ? `${failed} FAILED` : "all passed", "|", PROOF, CARD, CHECK);
+// The guard wallet: it asks the registry who is safe to pay. G is Real and the agent's account holds its verified
+// card, E is Fake, F was never checked, H is Unclear, and C is Real with no verified card.
+const G = fp(), H = fp();
+await call(R, PROOF, "record", { fingerprint: G, verdict: "Real", check_id: "e2e-g" });
+await call(R, PROOF, "record", { fingerprint: H, verdict: "Unclear", check_id: "e2e-h" });
+await call(R, CARD, "mint", { fingerprint: G, owner: AGENT });
+const wallet = () => view(GUARD, "wallet_of", { account_id: root.id });
+const gt = await view(GUARD, "terms");
+ok("the guard's terms say which registry and card contract it asks", gt.registry === PROOF && gt.cards === CARD && gt.paid === 0 && gt.refused === 0);
+// the payer: a key of the owner's that can only call `pay` on the guard
+const payKey = KeyPair.fromRandom("ed25519");
+await R.addFunctionCallAccessKey({ publicKey: payKey.getPublicKey(), contractId: GUARD, methodNames: ["pay"], allowance: nearToYocto("0.25") });
+const payer = new Account(root.id, provider, KeyPairSigner.fromSecretKey(payKey.toString()));
+const pay = (fingerprint, amount) => call(payer, GUARD, "pay", { fingerprint, amount: amount.toString() }, { gas: 80 });
+await mustFail("an account with no wallet can't pay", "has no wallet here", () => pay(G, HALF));
+const opened = getTransactionLastResult(await call(R, GUARD, "deposit", { limit: FEE.toString() }, { deposit: FEE * 3n }));
+ok("the owner loads the wallet and sets the most one payment may be", opened?.balance === (FEE * 3n).toString() && opened?.limit === FEE.toString());
+
+const p1 = await pay(G, HALF);
+const o1 = getTransactionLastResult(p1);
+ok("a Real card's holder is paid after the wallet asked the registry", o1?.decision === "Allow" && o1?.paid === HALF.toString() && o1?.to === AGENT, gasOf(p1));
+ok("the payment came out of the owner's wallet", (await wallet())?.balance === (FEE * 3n - HALF).toString());
+ok("the payment logged its event", JSON.stringify(p1.receipts_outcome.map((r) => r.outcome.logs)).includes("tally_guard"));
+const o2 = getTransactionLastResult(await pay(E, HALF));
+ok("a Fake card is refused, with why", o2?.decision === "Block" && o2?.paid === "0" && o2?.to === null && /Fake/.test(o2?.why), o2?.why);
+const o3 = getTransactionLastResult(await pay(F, HALF));
+ok("a card Tally never checked is refused", o3?.decision === "Block" && o3?.paid === "0" && /No record/.test(o3?.why), o3?.why);
+const o4 = getTransactionLastResult(await pay(H, HALF));
+ok("an Unclear card is not paid: the owner is to be asked", o4?.decision === "Warn" && o4?.paid === "0" && /ask the owner/.test(o4?.why), o4?.why);
+const o5 = getTransactionLastResult(await pay(C, HALF)); // (C is still Real; its holder burned its verified card above)
+ok("a Real card nobody holds has nobody to pay", o5?.decision === "Allow" && o5?.paid === "0" && /nobody to pay/.test(o5?.why), o5?.why);
+ok("the refusals left the money where it was", (await wallet())?.balance === (FEE * 3n - HALF).toString());
+await mustFail("a payment over the limit is refused before anyone is asked", "more than the owner's limit", () => pay(G, FEE + 1n));
+await mustFail("the payer's key can't send NEAR anywhere", /access key|AccessKey|permission/i, () => payer.transfer({ receiverId: AGENT, amount: 1n }));
+await mustFail("the payer's key can't take the money back", /access key|AccessKey|method/i, () => call(payer, GUARD, "refund", {}));
+const gb = await call(R, GUARD, "refund", {});
+ok("the owner takes back what the wallet still holds, and it is closed", getTransactionLastResult(gb) === (FEE * 3n - HALF).toString() && (await wallet()) === null, gasOf(gb));
+const gt2 = await view(GUARD, "terms");
+ok("the guard counted one payment and four refusals", gt2.paid === 1 && gt2.refused === 4, `${gt2.paid} paid, ${gt2.refused} refused`);
+
+console.log(failed ? `${failed} FAILED` : "all passed", "|", PROOF, CARD, CHECK, GUARD);
 process.exit(failed ? 1 : 0);

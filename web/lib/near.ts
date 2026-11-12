@@ -53,6 +53,8 @@ export interface NftToken {
 export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "proof.notpab.testnet";
 export const CARD_CONTRACT_ID = process.env.NEXT_PUBLIC_CARD_CONTRACT_ID || "card.notpab.testnet";
 export const CHECK_CONTRACT_ID = process.env.NEXT_PUBLIC_CHECK_CONTRACT_ID || "check.notpab.testnet";
+/** The guard wallet (contracts/guard): an example wallet that asks the registry before it pays. */
+export const GUARD_CONTRACT_ID = process.env.NEXT_PUBLIC_GUARD_CONTRACT_ID || "tally-guard.testnet";
 export const RPC_URL = process.env.NEXT_PUBLIC_NEAR_RPC || "https://rpc.testnet.fastnear.com";
 /**
  * Where the ledger reads the list of Tally's own real checks (fingerprints and counts only, lib/ledger.ts tallyChecks):

@@ -9,7 +9,7 @@ cd web
 node scripts/evidence.mjs
 ```
 
-It asks NEAR about each claim, prints a line for each, and ends with `13 of 13 match`. If NEAR answers anything else, it prints what NEAR said and exits with an error.
+It asks NEAR about each claim, prints a line for each, and ends with `14 of 14 match`. If NEAR answers anything else, it prints what NEAR said and exits with an error.
 
 ## The claims
 
@@ -29,6 +29,7 @@ It asks NEAR about each claim, prints a line for each, and ends with `13 of 13 m
 | 11 | A verified card's picture is drawn by this site. | `card.notpab.testnet nft_metadata` | base_uri https://tally-near.vercel.app |
 | 12 | A paid check costs 0.01 NEAR, and half of it goes to the trader's verified card. | `check.notpab.testnet terms` | fee 10000000000000000000000 (0.01 NEAR), trader_percent 50 |
 | 13 | The paid check reads the same registry and pays into the same verified cards. | `check.notpab.testnet terms` | registry proof.notpab.testnet, cards card.notpab.testnet |
+| 14 | The example guard wallet asks the same registry before it pays, and pays the holders of the same verified cards. | `tally-guard.testnet terms` | registry proof.notpab.testnet, cards card.notpab.testnet |
 <!-- claims:end -->
 
 The table and the script read the same file, `web/scripts/evidence-claims.json`, so they can't drift apart (`web/tests/evidence.test.ts` checks it).
@@ -49,4 +50,4 @@ A re-saved, resized or cropped copy of a card is a different file with a differe
 
 ## What isn't a read
 
-Refusals (a transfer of a verified card, a withdraw after a correction, an agent's key sending money) can't be shown by a read. They are run for real on testnet by `node scripts/e2e-contracts.mjs` and `node scripts/demo-agent.mjs`, which print each transaction.
+Refusals (a transfer of a verified card, a withdraw after a correction, an agent's key sending money) can't be shown by a read. They are run for real on testnet by `node scripts/e2e-contracts.mjs`, `node scripts/demo-agent.mjs` and `node scripts/demo-guard.mjs` (a wallet that won't pay a Fake card's trader), which print each transaction.

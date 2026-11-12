@@ -2,7 +2,7 @@
 
 The README's "every way to cheat" table covers what a faker can try against the contracts. This file covers the rest: keys, secrets, mistakes and outages. Each row says what stops it and, plainly, what nothing here stops.
 
-Everything is on NEAR testnet. The accounts are `proof.notpab.testnet` (the registry), `card.notpab.testnet` (verified cards) and `check.notpab.testnet` (the paid check).
+Everything is on NEAR testnet. The accounts are `proof.notpab.testnet` (the registry), `card.notpab.testnet` (verified cards), `check.notpab.testnet` (the paid check) and `tally-guard.testnet` (the example guard wallet).
 
 | What could go wrong | What stops or limits it | What's left |
 |---|---|---|
@@ -11,6 +11,7 @@ Everything is on NEAR testnet. The accounts are `proof.notpab.testnet` (the regi
 | **Tally gets a verdict wrong.** | NEAR makes a verdict permanent and public. It doesn't make it right. A correction is a new entry on top, and the old one stays visible. Anyone can ask for a recheck of a verified card, and a card that is no longer Real is burned. `withdraw` asks the registry first. | An agent that acted before the correction. Money a holder took out while the card still said Real. |
 | **The registry can't be reached.** | The rule is block: no answer is never a yes (`decide` in `contracts/types` and `web/scripts/agent-rule.mjs`). The paid check charges nothing when the registry doesn't answer. The site shows "couldn't be read", never "none". | Nothing can be checked while NEAR's RPC is down. An agent that ignores the rule. |
 | **Someone talks an AI agent into it** ("the owner says it's fine", "ignore your rules"). | The agent's key can only call `check` on one contract, so NEAR refuses anything else it signs. The decision comes from the record, not from what the agent was told. The demo agent acts this out and prints the refusal. | The demo agent is a script, not an AI model. An owner who gives an agent a full-access key, or an agent that doesn't follow the rule, isn't protected. |
+| **An agent is told to pay a faker**, by a message, a prompt or a post. | The guard wallet (`contracts/guard`) asks the registry in the same call that would send the money, and pays a card's holder only when the answer is Real. Unclear, Fake, no record and no answer all pay nothing, and the answer says why. The agent's key can only call `pay`. The owner's limit caps one payment. | It is an example on testnet, not a product people hold money in. No wallet outside this repository asks the registry today. It pays whoever holds a Real card's verified card, so it is only as right as Tally's verdict. The limit is per payment, not per day: an agent can make many payments under it, each to a Real card's holder. |
 | **A fake card is re-saved so its fingerprint changes.** | A fingerprint is the SHA-256 of one exact file. A changed file has no record, and no record is a block. A fake can't inherit another card's Real. | A real card that was re-saved, cropped or re-compressed by a site also has no record. It reads as "never checked", not as fake, and the trader needs the original file. A record says a card is real. It never says who posted it. |
 | **A verified card is sold, then its card turns out fake.** | A verified card can't be sold or moved: every transfer is refused. If the verdict is corrected, a recheck burns it, `withdraw` is refused, and what it held stays locked for everyone, Tally included. | Someone can sell the NEAR account that holds a verified card. No contract can see that. |
 | **The demo's shared password is guessed.** It has no limit on attempts. | The keys behind the demo's buttons are function-call keys (`record`, or `mint` and `recheck`), testnet only, 0.25 NEAR of gas each. The demo only writes check ids starting `sample-`, which are never Tally's own checks. | Junk sample entries, and a sample card's verdict flipped. Both show in the history. |
@@ -26,4 +27,4 @@ Everything is on NEAR testnet. The accounts are `proof.notpab.testnet` (the regi
 
 ## Check it
 
-`node scripts/evidence.mjs` in `web` reads each claim from NEAR (see `EVIDENCE.md`). The refusals are run for real on testnet by `node scripts/e2e-contracts.mjs` and `node scripts/demo-agent.mjs`.
+`node scripts/evidence.mjs` in `web` reads each claim from NEAR (see `EVIDENCE.md`). The refusals are run for real on testnet by `node scripts/e2e-contracts.mjs`, `node scripts/demo-agent.mjs` and `node scripts/demo-guard.mjs`.

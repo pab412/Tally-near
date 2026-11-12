@@ -4,7 +4,8 @@
   "contracts": {
     "proof": "proof.notpab.testnet",
     "card": "card.notpab.testnet",
-    "check": "check.notpab.testnet"
+    "check": "check.notpab.testnet",
+    "guard": "tally-guard.testnet"
   },
   "claims": [
     {
@@ -70,6 +71,11 @@
     {
       "claim": "The paid check reads the same registry and pays into the same verified cards.",
       "contract": "check", "method": "terms", "args": {},
+      "expect": "registry proof.notpab.testnet, cards card.notpab.testnet", "test": {"all": [{"at": "registry", "equals": "proof.notpab.testnet"}, {"at": "cards", "equals": "card.notpab.testnet"}]}
+    },
+    {
+      "claim": "The example guard wallet asks the same registry before it pays, and pays the holders of the same verified cards.",
+      "contract": "guard", "method": "terms", "args": {},
       "expect": "registry proof.notpab.testnet, cards card.notpab.testnet", "test": {"all": [{"at": "registry", "equals": "proof.notpab.testnet"}, {"at": "cards", "equals": "card.notpab.testnet"}]}
     }
   ]

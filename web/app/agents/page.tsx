@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { ANSWER_FIELDS, ERRORS, PAID_METHODS } from "@/lib/agent-api";
+import { ANSWER_FIELDS, ERRORS, GUARD_METHODS, PAID_METHODS, WALLET_CODE } from "@/lib/agent-api";
 import { DEMO_PATH } from "@/lib/fingerprint";
-import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, RPC_URL, explorerAccountUrl } from "@/lib/near";
+import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, GUARD_CONTRACT_ID, RPC_URL, explorerAccountUrl } from "@/lib/near";
 import { CONTRACT_TESTS, TESTNET_CHECKS } from "@/lib/repo-facts";
 import { sampleFingerprints } from "@/lib/sample";
 import { DocPage, Onward, PageHead, REPO, Row, Rows, Section } from "../doc-parts";
@@ -264,6 +264,34 @@ export default function ForAgents() {
             </p>
           </Row>
         </Rows>
+      </Section>
+
+      <Section id="wallets" kicker="For wallet builders" title="Ask who is safe to pay, before the money moves.">
+        <p>
+          A spending limit says how much an agent may spend. The registry says who it may pay. A wallet asks it in the same call that would
+          send the money, so what the agent was told never decides.
+        </p>
+        <pre className="code">
+          <code>{WALLET_CODE}</code>
+        </pre>
+        <dl className="pairs">
+          {GUARD_METHODS.map((m) => (
+            <div key={m.method}>
+              <dt>
+                <code>{m.call}</code>
+                <span className="muted">{m.who}</span>
+              </dt>
+              <dd>{m.what}</dd>
+            </div>
+          ))}
+        </dl>
+        <p>
+          The whole thing is <code>contracts/guard</code>, an example wallet on testnet at {account(GUARD_CONTRACT_ID)}. It is not a product
+          people hold money in. Try it: <code>node scripts/demo-guard.mjs</code> pays a Real card&apos;s holder and is refused for a Fake one.{" "}
+          <a href={`${REPO}/blob/main/contracts/guard/src/lib.rs`} target="_blank" rel="noreferrer">
+            Its source <ExternalIcon />
+          </a>
+        </p>
       </Section>
 
       <Onward href={DEMO_PATH} label="Open the demo">
