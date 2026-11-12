@@ -399,3 +399,29 @@ button.ledger-row:hover,button.ledger-row[aria-expanded=true]{background:rgba(25
 @media(max-width:700px){.ledger-head>a{display:none}}
 @media(max-width:560px){.tab-long{display:none}.tab-short{display:inline}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+
+/* the "try to break it" page: a message to the model on the left, what then happened on the right */
+.attempt{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:32px 64px;align-items:start;padding-top:48px}
+.attempt-form{display:flex;flex-direction:column;gap:24px;min-width:0}
+.attempt-form fieldset{margin:0;padding:0;border:0;min-width:0}
+.attempt-form legend{margin-bottom:8px;padding:0;color:var(--text-muted);font-size:.8125rem}
+.attacks{display:flex;flex-wrap:wrap;gap:8px}
+.attacks .btn-secondary{min-height:44px}
+.attacks .btn-secondary:disabled{opacity:.45;cursor:not-allowed}
+.field textarea{display:block;width:100%;padding:12px 14px;border:1px solid var(--border-strong);border-radius:var(--r);background:rgba(8,9,12,.6);color:inherit;font:inherit;line-height:1.5;resize:vertical;transition:border-color .15s}
+.field textarea::placeholder{color:#6f6f7c}
+.field textarea:hover{border-color:var(--text-muted)}
+.field textarea:focus{outline:none;border-color:var(--brand);box-shadow:var(--ring)}
+.field textarea:disabled{opacity:.6;cursor:not-allowed}
+.attempt-send{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;margin:0;font-size:.875rem}
+/* each thing that happened, in order: who did it, what came of it, and the detail from the record */
+.log{margin:0;list-style:none}
+.frame>.log{padding:6px 22px}
+.log li{padding:14px 0;border-bottom:1px solid var(--border)}
+.log li:last-child{border-bottom:0}
+.log p{margin:0;overflow-wrap:anywhere}
+.log-who{color:var(--text-muted);font-size:.8125rem;line-height:1.4}
+.log-what{margin-top:4px!important;color:var(--text);font-size:.9375rem;line-height:1.5}
+.log-what svg{width:16px;height:16px;margin:0 8px -3px 0;color:var(--tone)}
+.log-detail{margin-top:2px!important;color:var(--text-secondary);font-size:.875rem;line-height:1.5}
+@media(max-width:940px){.attempt{grid-template-columns:1fr;padding-top:32px}}

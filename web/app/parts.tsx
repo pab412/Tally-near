@@ -48,7 +48,7 @@ export function Wordmark() {
   );
 }
 
-export type PageId = "home" | "how" | "cards" | "agents" | "faq" | "demo";
+export type PageId = "home" | "how" | "cards" | "agents" | "faq" | "demo" | "break";
 
 // `short` is the name on a phone, where the whole menu has to fit one row. A page with `short: null` is left off
 // that row: the site's name, just above it, already links home.
@@ -286,11 +286,11 @@ export function SwitchedOff({ head, children }: { head: string; children: ReactN
 }
 
 /** Sends one of the demo's writes to the server. Answers the JSON body, or the message to show. */
-export async function send<T>(path: string, body: object): Promise<{ ok: true; body: T } | { ok: false; status: number; message: string }> {
+export async function send<T>(path: string, body: object): Promise<{ ok: true; body: T } | { ok: false; status: number; message: string; reason?: string }> {
   try {
     const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, status: res.status, message: json.error ?? "That didn't work. Try again." };
+    if (!res.ok) return { ok: false, status: res.status, message: json.error ?? "That didn't work. Try again.", reason: typeof json.reason === "string" ? json.reason : undefined };
     return { ok: true, body: json as T };
   } catch {
     return { ok: false, status: 0, message: "Couldn't reach the server. Check your connection and try again." };

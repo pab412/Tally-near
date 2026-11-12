@@ -76,7 +76,7 @@ An agent can follow the same steps from one file: [tally-near.vercel.app/SKILL.m
 | Guard demo | `web/scripts/demo-guard.mjs` | One command. An agent with a key that can only call `pay` asks the guard wallet to pay three traders. One is paid, two are refused, and each prints its transaction. |
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, the allow / warn / block rule, and how the paid check talks to the card contract. 8 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 94 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 118 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses. The guard wallet answers at `tally-guard.testnet`.
 
@@ -325,7 +325,7 @@ cd web
 npm test
 ```
 
-You should see `94 passed`.
+You should see `118 passed`.
 
 ### Try recording yourself
 
