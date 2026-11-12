@@ -24,12 +24,15 @@ export function writesEnabled(env: Pick<DemoEnv, "password" | "account" | "key">
   return Boolean(env.password && env.account && env.key);
 }
 
-function samePassword(given: string, expected: string): boolean {
+export function samePassword(given: string, expected: string): boolean {
   // Hash both first so the comparison takes the same time whatever the lengths.
   const a = createHash("sha256").update(given).digest();
   const b = createHash("sha256").update(expected).digest();
   return timingSafeEqual(a, b);
 }
+
+/** Every write this site signs, the demo's and Tally's own, goes to testnet and nowhere else. */
+export const onTestnet = (account: string, contractId: string) => account.endsWith(".testnet") && contractId.endsWith(".testnet");
 
 /** Who signs, and where: what a signer needs besides the request itself. */
 export interface Signer {
@@ -48,9 +51,7 @@ export interface Admitted {
 /** Lets a write request in, or says why not. `off` is what to say when this copy of the page has no key. */
 export function admit(body: unknown, env: DemoEnv, off: string): Admitted | Fail {
   if (!writesEnabled(env)) return fail(503, off);
-  if (!env.account!.endsWith(".testnet") || !env.contractId.endsWith(".testnet")) {
-    return fail(503, "This demo only writes to NEAR testnet.");
-  }
+  if (!onTestnet(env.account!, env.contractId)) return fail(503, "This demo only writes to NEAR testnet.");
   const input = (typeof body === "object" && body !== null ? body : {}) as Record<string, unknown>;
   if (typeof input.password !== "string" || !samePassword(input.password, env.password!)) {
     return fail(401, "Wrong password.");

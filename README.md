@@ -52,7 +52,7 @@ You should see `DON'T COPY` for the card recorded Fake, `COPY` for sample card B
 | Paid check contract | `contracts/check` | 21 unit tests pass, and the whole flow passes on testnet in the same run, with an agent whose key can only pay for checks. Live on testnet at `check.notpab.testnet`. |
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, and how the paid check talks to the card contract. 3 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 68 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 76 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses.
 
@@ -253,7 +253,7 @@ cd web
 npm test
 ```
 
-You should see `68 passed`.
+You should see `76 passed`.
 
 ### Try recording yourself
 
@@ -289,6 +289,16 @@ The same for the card contract, with `--contract-account-id card.<your-account>.
 
 Without `RECORD_PASSWORD`, the account and the key all set, recording is switched off and the page says so. Without `NEAR_CARD_KEY`, minting is. The server refuses any account that isn't on testnet.
 
+### Tally's own checks
+
+The demo records sample checks. Tally's real ones arrive another way: Tally's server (tallypnl.com) posts a card's fingerprint, the verdict and its own id for the check to `/api/attest` on this site, with a secret the two servers share, and this site signs it with the same attester key (`web/lib/attest.ts`, 6 tests). Nothing else is sent: no name, no handle, no picture.
+
+- **What Tally sends.** Real, for a card Tally made itself from a member's linked wallet, at the moment it is posted. Fake, for a card on X whose fake verdict Tally's staff confirmed, and Unclear on top if that is later withdrawn. Never a verdict Tally reached on its own with no person confirming it.
+- **Kept apart from the samples.** A check id that starts `sample-` is the demo's mark and is refused here, so a real record can't pass for a sample or a sample for a real one. Real ones read `tally-<number>`.
+- **Sent twice, written once.** The registry is asked first; an entry that is already the card's latest is answered without signing again.
+- **The ledger.** The registry keeps no list, so the front page asks Tally which fingerprints it has sent (`/api/tally`, which reads tallypnl.com's public list) and then reads each record from NEAR itself. Every verdict shown still comes from NEAR.
+- **Switched on by one setting:** `TALLY_ATTEST_SECRET` on this site, and the same value on Tally's server. Without it the route answers 503 and the registry holds samples only.
+
 ## What you still have to trust
 
 - **The verdict is Tally's.** NEAR makes a verdict permanent and public. It doesn't make it right. A wrong one is corrected by adding to the record, never by changing it.
@@ -296,6 +306,7 @@ Without `RECORD_PASSWORD`, the account and the key all set, recording is switche
 - **Only unclaimed money is lost with a burned card.** A holder can withdraw whenever the registry says Real, so a card that is corrected later loses what it holds at that moment, not what was already taken out.
 - **The paid check is a choice.** Records are public, so an agent can read them for free. It pays for the receipt and to reward the trader.
 - **The demo's write buttons sit behind one shared password, with no limit on attempts.** That is why the keys behind them are function-call keys: each can only call `record`, or `mint` and `recheck`, on testnet, with a 0.25 NEAR gas allowance. A guessed password could add sample records to the testnet registry and nothing more.
+- **Tally's server can write a verdict too**, through `/api/attest`, with a secret in place of the demo's password. It signs with the same function-call key, so the same limits hold: `record` only, testnet only.
 - **The picture is drawn off-chain**, by this site. The token's link carries only the fingerprint, and the record on NEAR is what counts.
 
 ## Built with

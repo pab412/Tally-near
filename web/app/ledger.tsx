@@ -8,7 +8,20 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { badgePath, DEMO_PATH, isFingerprint, recordPath } from "@/lib/fingerprint";
-import { entriesOf, findCard, latestOf, loadLedger, searchRows, searchText, tally, type EntryPlace, type Ledger as LedgerData, type LedgerRow } from "@/lib/ledger";
+import {
+  entriesOf,
+  findCard,
+  latestOf,
+  loadLedger,
+  searchRows,
+  searchText,
+  tally,
+  tallyChecks,
+  type EntryPlace,
+  type Ledger as LedgerData,
+  type LedgerRow,
+  type TallyChecks,
+} from "@/lib/ledger";
 import { explorerAccountUrl, formatDay, formatMoment, shortFingerprint, type CheckTerms, type Verdict, type VerifiedCard } from "@/lib/near";
 import { inNear } from "@/scripts/agent-rule.mjs";
 import { useRecordLink } from "./copy-link";
@@ -33,6 +46,8 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 type Opened = Record<string, boolean>;
 
+/** What a row calls a real card from Tally's own list. A sample keeps its own name. */
+const REAL_LABEL = { card: "Tally card", fake: "Confirmed fake", cleared: "Cleared" } as const;
 const NOTE: Record<EntryPlace, string> = { only: "", corrected: "Corrected later, still on record", correction: "Correction, added on top" };
 const times = (n: number) => (n === 1 ? "once" : n === 2 ? "twice" : `${n} times`);
 const iso = (ms: number) => new Date(ms).toISOString();
@@ -42,34 +57,45 @@ export function Ledger({
   cardContractId,
   checkContractId,
   known,
+  tallyUrl,
 }: {
   contractId: string;
   cardContractId: string;
   checkContractId: string;
   known: readonly KnownCard[];
+  /** Where Tally lists its own real checks (fingerprints only). The ledger asks NEAR about each of them too. */
+  tallyUrl: string;
 }) {
   const [tab, setTab] = useState<TabId>("proof");
   const [attempt, setAttempt] = useState(0);
-  const [read, setRead] = useState<{ attempt: number; ledger: LedgerData } | null>(null);
+  const [read, setRead] = useState<{ attempt: number; ledger: LedgerData; real: TallyChecks | null } | null>(null);
   const [openBadges, setOpenBadges] = useState<Opened>({});
 
   useEffect(() => {
     let live = true;
-    void loadLedger(
-      known.map((card) => card.fingerprint),
-      { contractId, cardContractId, checkContractId },
-    ).then((ledger) => live && setRead({ attempt, ledger }));
+    // Tally's list says which real cards to ask about; without it the ledger still shows what the site can name itself
+    void tallyChecks(tallyUrl).then(async (real) => {
+      const names = [...known, ...(real?.records ?? [])].map((card) => card.fingerprint);
+      const ledger = await loadLedger(names, { contractId, cardContractId, checkContractId });
+      if (live) setRead({ attempt, ledger, real });
+    });
     return () => {
       live = false;
     };
-  }, [attempt, known, contractId, cardContractId, checkContractId]);
+  }, [attempt, known, tallyUrl, contractId, cardContractId, checkContractId]);
 
   // what an earlier attempt read is not shown while a new one is asked
   const ledger = read?.attempt === attempt ? read.ledger : null;
   const nothingRead = ledger !== null && ledger.cards === null && ledger.verified === null && ledger.terms === null && !ledger.rows.length;
   const counts: Record<TabId, number | null | undefined> = { proof: ledger?.cards, card: ledger?.verifiedTotal, check: ledger?.terms?.checks };
   const contract = { proof: contractId, card: cardContractId, check: checkContractId }[tab];
-  const cardOf = (fp: string) => known.find((card) => card.fingerprint === fp);
+  const real = read?.attempt === attempt ? read.real : null;
+  const cardOf = (fp: string): KnownCard | undefined => {
+    const mine = known.find((card) => card.fingerprint === fp);
+    if (mine) return mine;
+    const theirs = real?.records.find((r) => r.fingerprint === fp);
+    return theirs && { fingerprint: fp, label: REAL_LABEL[theirs.kind] };
+  };
 
   function seeBadge(fp: string) {
     setOpenBadges((was) => ({ ...was, [fp]: true }));
@@ -118,7 +144,16 @@ export function Ledger({
           </div>
         ))}
       </div>
-      <p className="ledger-note muted">{ledger && !nothingRead && "Read from NEAR testnet as this page opened."}</p>
+      <p className="ledger-note muted">
+        {ledger && !nothingRead && "Read from NEAR testnet as this page opened."}
+        {ledger && !nothingRead && real && real.tally.counted > 0 && (
+          <>
+            {" "}
+            Off the chain, Tally itself has counted {real.tally.counted.toLocaleString("en-US")} cards and caught {real.tally.caught.toLocaleString("en-US")} as
+            fake (<a href="https://tallypnl.com">tallypnl.com</a>).
+          </>
+        )}
+      </p>
     </section>
   );
 }

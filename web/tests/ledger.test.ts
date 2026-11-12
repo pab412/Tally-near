@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { entriesOf, findCard, loadLedger, searchRows, tally, type LedgerRow } from "@/lib/ledger";
+import { entriesOf, findCard, loadLedger, searchRows, tally, tallyChecks, type LedgerRow } from "@/lib/ledger";
 import { shortFingerprint, type NftToken, type Proof } from "@/lib/near";
 
 const A = "a".repeat(64); // checked, then corrected
@@ -145,5 +145,34 @@ describe("the ledger's rows", () => {
     expect(found(B)).toEqual([B]);
     expect(found("sample a")).toEqual([A]);
     expect(found("zz")).toEqual([]);
+  });
+});
+
+describe("Tally's own list of real checks", () => {
+  const serve = (body: unknown, status = 200) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+
+  it("keeps fingerprints, their kind and Tally's totals, and drops anything else it is sent", async () => {
+    const list = await tallyChecks(
+      "/api/tally",
+      serve({
+        cards: 2,
+        records: [
+          { fingerprint: A, kind: "card", name: "@trader", ref: "share:7" },
+          { fingerprint: B, kind: "fake" },
+          { fingerprint: "nope", kind: "card" },
+          { fingerprint: C, kind: "owner" },
+          null,
+        ],
+        tally: { counted: 1204, caught: "37" },
+      }),
+    );
+    expect(list).toEqual({ records: [{ fingerprint: A, kind: "card" }, { fingerprint: B, kind: "fake" }], tally: { counted: 1204, caught: 0 } });
+  });
+
+  it("is null when Tally can't be read or sends something else, so the ledger shows only what it can name itself", async () => {
+    expect(await tallyChecks("/api/tally", serve({ error: "rate_limited" }, 429))).toBeNull();
+    expect(await tallyChecks("/api/tally", serve("<html>"))).toBeNull();
+    expect(await tallyChecks("/api/tally", serve({ records: "all of them" }))).toBeNull();
+    expect(await tallyChecks("/api/tally", (async () => { throw new Error("down"); }) as unknown as typeof fetch)).toBeNull();
   });
 });

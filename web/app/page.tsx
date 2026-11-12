@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { DEMO_PATH } from "@/lib/fingerprint";
-import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, DEMO_RECORD_FP } from "@/lib/near";
+import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, DEMO_RECORD_FP, TALLY_CHECKS_PATH } from "@/lib/near";
 import { sampleFingerprints } from "@/lib/sample";
 import { DocPage, REPO } from "./doc-parts";
 import { ExternalIcon } from "./icons";
@@ -81,7 +81,7 @@ export default function Home() {
         </ul>
       </section>
 
-      <Ledger contractId={CONTRACT_ID} cardContractId={CARD_CONTRACT_ID} checkContractId={CHECK_CONTRACT_ID} known={KNOWN} />
+      <Ledger contractId={CONTRACT_ID} cardContractId={CARD_CONTRACT_ID} checkContractId={CHECK_CONTRACT_ID} known={KNOWN} tallyUrl={TALLY_CHECKS_PATH} />
     </DocPage>
   );
 }

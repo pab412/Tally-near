@@ -154,3 +154,33 @@ export function searchRows<T extends { fingerprint: string }>(rows: readonly T[]
       searchText(nameOf(fingerprint)).includes(text),
   );
 }
+
+/**
+ * Tally's own real checks, as tallypnl.com lists them: fingerprints and counts, nothing that says whose card it is.
+ * The list only tells the ledger which fingerprints to ask NEAR about: every verdict it shows still comes from NEAR.
+ * `tally` is Tally's own totals, off the chain.
+ */
+export interface TallyChecks {
+  records: { fingerprint: string; kind: "card" | "fake" | "cleared" }[];
+  tally: { counted: number; caught: number };
+}
+
+const KINDS = ["card", "fake", "cleared"];
+const count = (v: unknown) => (typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : 0);
+
+/** Reads that list. Null when it can't be read or isn't what was expected: the ledger then shows what it can name itself. */
+export async function tallyChecks(url: string, doFetch: typeof fetch = fetch): Promise<TallyChecks | null> {
+  try {
+    const res = await doFetch(url, { signal: AbortSignal.timeout(6_000) });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { records?: unknown; tally?: { counted?: unknown; caught?: unknown } } | null;
+    if (!body || !Array.isArray(body.records)) return null;
+    const records = body.records
+      .filter((r): r is TallyChecks["records"][number] => isFingerprint(r?.fingerprint) && KINDS.includes(r?.kind))
+      .slice(0, 50)
+      .map(({ fingerprint, kind }) => ({ fingerprint, kind }));
+    return { records, tally: { counted: count(body.tally?.counted), caught: count(body.tally?.caught) } };
+  } catch {
+    return null;
+  }
+}
