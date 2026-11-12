@@ -80,6 +80,7 @@ export default function ForAgents() {
       <p className="jump">
         <a href="#operators">For AI operators</a>
         <a href="#developers">For developers</a>
+        <a href="#wallets">For wallet builders</a>
         {/* the same steps written for an agent to follow, as one plain file */}
         <a href="/SKILL.md">For your agent: SKILL.md</a>
       </p>
@@ -135,6 +136,10 @@ export default function ForAgents() {
             <h3>Why pay when reading is free?</h3>
             <p>For the receipt: a public record on NEAR that this agent checked this card before it acted.</p>
             <p>The fee also pays the trader, and a paid check is what gets a badge burned once its verdict was corrected.</p>
+            <h3>How does an agent find it?</h3>
+            <p>
+              From this page or <a href="/SKILL.md">SKILL.md</a>. It pays the contract directly on NEAR: no marketplace and no account with Tally.
+            </p>
           </div>
         </div>
       </Section>
@@ -180,6 +185,13 @@ export default function ForAgents() {
           <div className="stack">
             <div className="prose">
               <p>Every read is a plain JSON-RPC call to a NEAR node. Pick a method to see the call and what NEAR answers right now.</p>
+              <p>
+                In Claude Code or Codex, the same reads come as a plug-in:{" "}
+                <a href={`${REPO}/tree/main/mcp`} target="_blank" rel="noreferrer">
+                  the MCP server <ExternalIcon />
+                </a>
+                . No key, nothing paid.
+              </p>
             </div>
             <Frame title="Endpoint and contracts">
               <dl className="facts">

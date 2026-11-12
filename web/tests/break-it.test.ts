@@ -9,7 +9,6 @@ import {
   attempt,
   guard,
   handleAgent,
-  limiter,
   nearAi,
   type AgentEnv,
   type Asked,
@@ -20,6 +19,7 @@ import {
   type ToolCall,
 } from "@/lib/break-it";
 import { ATTACKS, ENDED, MAX_MESSAGE, lineOf } from "@/lib/break-it-words";
+import { limiter } from "@/lib/limit";
 import type { ProofRecord, Verdict } from "@/lib/near";
 
 const OTHER = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";

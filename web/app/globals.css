@@ -432,3 +432,14 @@ button.ledger-row:hover,button.ledger-row[aria-expanded=true]{background:rgba(25
 .card-events{margin-top:32px}
 .card-source{margin:24px 0 0;max-width:78ch;font-size:.875rem;line-height:1.5}
 .log-who time{font-variant-numeric:tabular-nums}
+/* what the card holds, quoted as SOL: an address, a button, and the quote */
+.card-quote{max-width:720px;margin-top:40px}
+.quote-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px}
+.quote-form .field{flex:1 1 280px;min-width:0}
+.quote-form .field input{font-family:var(--f-mono);font-size:.875rem}
+.quote-form .btn-secondary{min-height:48px}
+.quote-form .btn-secondary:disabled{opacity:.45;cursor:not-allowed}
+.frame>div[aria-live]:empty{display:none}
+.frame>div[aria-live] p{margin:0}
+.quote-said{color:var(--text);font-size:1.0625rem;line-height:1.5}
+.quote-said strong{font-weight:600}

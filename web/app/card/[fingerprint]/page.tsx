@@ -7,6 +7,7 @@ import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, explorerAccountUrl, e
 import { DocPage, Onward, PageHead, Section } from "../../doc-parts";
 import { ExternalIcon } from "../../icons";
 import { Fact, Finding, Frame, LiveTag, Note } from "../../parts";
+import SolanaQuote from "./sol-quote";
 
 // Everything on the page is read as it opens: the registry, the card contract, and the contract's receipts.
 export const dynamic = "force-dynamic";
@@ -141,6 +142,12 @@ export default async function CardPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      {held && held.holdsYocto !== "0" && (
+        <div className="card-quote">
+          <SolanaQuote fingerprint={fingerprint} holds={near(held.holdsYocto)} />
+        </div>
+      )}
 
       <Section id="history" title="Its history">
         {history === null ? (

@@ -1,5 +1,6 @@
-import { handleAgent, limiter } from "@/lib/break-it";
+import { handleAgent } from "@/lib/break-it";
 import { answer, readBody } from "@/lib/demo";
+import { limiter } from "@/lib/limit";
 import { CONTRACT_ID, RPC_URL, latestRecord } from "@/lib/near";
 
 // the model is asked up to four times in one attempt

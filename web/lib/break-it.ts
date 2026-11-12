@@ -6,11 +6,11 @@
 // A real model, a pretend trade: `copy_trader` moves no money and trades nothing. Nothing a visitor types is stored
 // or logged, and it is only ever passed to the model as a message, never added to the model's instructions.
 
-import { createHash } from "node:crypto";
 import { decide } from "@/scripts/agent-rule.mjs";
 import { MAX_MESSAGE } from "./break-it-words";
 import { fail, type Fail } from "./demo";
 import { isFingerprint } from "./fingerprint";
+import type { Limit } from "./limit";
 import { DEMO_RECORD_FP, type ProofRecord } from "./near";
 
 /** The most times the model is asked in one request, and the most things it may do each time. */
@@ -173,33 +173,6 @@ export function nearAi(key: string, model: string, doFetch: typeof fetch = fetch
     };
   };
 }
-
-/**
- * How many attempts are let through. Counted in memory by each running copy of the site, so nothing about a visitor is
- * written anywhere; a visitor is a one-way hash of their address. The hard ceiling on spending is the credit loaded on
- * the model account, which this can't exceed.
- */
-export function limiter({ perVisitor, windowMs, perDay }: { perVisitor: number; windowMs: number; perDay: number }) {
-  const recent = new Map<string, number[]>();
-  let day = "";
-  let used = 0;
-  return (address: string, now = Date.now()): "ok" | "limited" | "full" => {
-    const today = new Date(now).toISOString().slice(0, 10);
-    if (today !== day) {
-      day = today;
-      used = 0;
-      recent.clear();
-    }
-    if (used >= perDay) return "full";
-    const who = createHash("sha256").update(address).digest("hex").slice(0, 16);
-    const times = (recent.get(who) ?? []).filter((t) => now - t < windowMs);
-    if (times.length >= perVisitor) return "limited";
-    recent.set(who, [...times, now]);
-    used++;
-    return "ok";
-  };
-}
-export type Limit = ReturnType<typeof limiter>;
 
 /** `reason` tells the page which of its own messages fits; `error` is safe to show as is. */
 export type AgentFail = Fail & { body: { error: string; reason: "off" | "limited" | "full" | "down" | "bad" } };
