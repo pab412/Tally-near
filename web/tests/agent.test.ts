@@ -1,18 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { decide, inNear } from "../scripts/agent-rule.mjs";
+import { ACTION, decide, inNear } from "../scripts/agent-rule.mjs";
 
 const answer = (verdict: "Real" | "Unclear" | "Fake", held_by: string | null = null) => ({ record: { latest: { verdict } }, held_by });
 
 describe("the demo agent's rule", () => {
-  it("copies a trader only when NEAR says their card is Real", () => {
-    expect(decide(answer("Real"))).toEqual({ copy: true, why: "NEAR says Real" });
-    expect(decide(answer("Real", "trader.testnet"))).toEqual({ copy: true, why: "NEAR says Real, and trader.testnet holds its verified card" });
-    expect(decide(answer("Unclear"))).toEqual({ copy: false, why: "NEAR says Unclear" });
-    expect(decide(answer("Fake"))).toEqual({ copy: false, why: "NEAR says Fake" });
+  it("allows a copy only when NEAR says the card is Real, and blocks a Fake one", () => {
+    expect(decide(answer("Real"))).toEqual({ action: "allow", copy: true, why: "NEAR says Real" });
+    expect(decide(answer("Real", "trader.testnet"))).toEqual({ action: "allow", copy: true, why: "NEAR says Real, and trader.testnet holds its verified card" });
+    expect(decide(answer("Fake"))).toEqual({ action: "block", copy: false, why: "NEAR says Fake" });
+    expect(decide(answer("Fake", "trader.testnet")), "a verified card not burned yet doesn't make a Fake card safe").toMatchObject({ action: "block", copy: false });
   });
 
-  it("doesn't copy a trader whose card Tally never checked", () => {
-    expect(decide({ record: null, held_by: null })).toEqual({ copy: false, why: "Tally has never checked this card" });
+  it("warns and asks its owner when nobody knows: an Unclear card, or one Tally never checked", () => {
+    expect(decide(answer("Unclear"))).toEqual({ action: "warn", copy: false, why: "NEAR says Unclear" });
+    expect(decide({ record: null, held_by: null })).toEqual({ action: "warn", copy: false, why: "Tally has never checked this card" });
+  });
+
+  it("says what it does in words that can't be misread: only allow copies", () => {
+    expect(ACTION).toEqual({ allow: "ALLOW: COPY", warn: "WARN: ASK THE OWNER, DON'T COPY", block: "BLOCK: DON'T COPY" });
   });
 
   it("shows amounts in NEAR exactly, never rounded", () => {

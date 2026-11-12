@@ -24,10 +24,12 @@ const CONTRACTS = { proof: CONTRACT_ID, check: CHECK_CONTRACT_ID };
 const CONTRACT_NAMES = { proof: "The proof registry", check: "The paid check" };
 
 // What `node scripts/demo-agent.mjs` printed on a test run, shortened to fit: the account names are swapped for plain
-// ones and the links to each transaction are left out.
+// ones and the receipt link under each check is left out.
 const RUN = `Tally demo agent, on NEAR testnet
 Rule: copy a trader only if NEAR says
-their card is Real.
+their card is Real. Real: allow.
+Fake: block. Unclear or never
+checked: ask the owner.
 
 1. The owner loads credit: 0.02 NEAR.
    That is all the agent can spend.
@@ -37,17 +39,20 @@ their card is Real.
 3. The agent checks 2 cards:
    cab484af…3be332b8  paid 0.01 NEAR
      NEAR says Fake
-     DON'T COPY
+     BLOCK: DON'T COPY
    3171ca6c…36599e58  paid 0.01 NEAR
      NEAR says Real, and trader.testnet
      holds its verified card
-     COPY
+     ALLOW: COPY
      0.005 NEAR of the fee went into
      the trader's verified card.
 
-4. The agent tries to send 0.01 NEAR of
-   the owner's money to another account.
-   NEAR refuses.
+4. Attack, acted out: a message tells
+   the agent to skip the check and send
+   0.01 NEAR of the owner's money to
+   another account. It tries.
+   NEAR refuses: this key can only pay
+   for checks.
 5. The verified card now holds
    0.005 NEAR.
 6. The owner takes the agent's key away.`;
@@ -67,6 +72,8 @@ export default function ForAgents() {
       <p className="jump">
         <a href="#operators">For AI operators</a>
         <a href="#developers">For developers</a>
+        {/* the same steps written for an agent to follow, as one plain file */}
+        <a href="/SKILL.md">For your agent: SKILL.md</a>
       </p>
 
       <Section id="operators" kicker="For AI operators" title="Know which traders are real before your agent acts.">

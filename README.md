@@ -36,7 +36,9 @@ npm install
 node scripts/demo-agent.mjs
 ```
 
-You should see `DON'T COPY` for the card recorded Fake, `COPY` for sample card B with part of the fee going into its verified card, and NEAR refusing when the agent tries to send its owner's money away.
+You should see `BLOCK: DON'T COPY` for the card recorded Fake, `ALLOW: COPY` for sample card B with part of the fee going into its verified card, a receipt link under each check, and NEAR refusing when the agent, acting out one that was fooled by a message, tries to send its owner's money away.
+
+An agent can follow the same steps from one file: [tally-near.vercel.app/SKILL.md](https://tally-near.vercel.app/SKILL.md).
 
 ## What existed before, and what's new
 
@@ -52,7 +54,7 @@ You should see `DON'T COPY` for the card recorded Fake, `COPY` for sample card B
 | Paid check contract | `contracts/check` | 21 unit tests pass, and the whole flow passes on testnet in the same run, with an agent whose key can only pay for checks. Live on testnet at `check.notpab.testnet`. |
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, and how the paid check talks to the card contract. 3 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 76 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 77 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses.
 
@@ -253,7 +255,7 @@ cd web
 npm test
 ```
 
-You should see `76 passed`.
+You should see `77 passed`.
 
 ### Try recording yourself
 
@@ -288,6 +290,25 @@ near account add-key <your-account>.testnet grant-function-call-access --allowan
 The same for the card contract, with `--contract-account-id card.<your-account>.testnet --function-names mint,recheck`.
 
 Without `RECORD_PASSWORD`, the account and the key all set, recording is switched off and the page says so. Without `NEAR_CARD_KEY`, minting is. The server refuses any account that isn't on testnet.
+
+## Threat model: every way to cheat, and what stops it
+
+| Someone tries to | What stops it |
+|---|---|
+| Get a verified card for a fake card, or one Tally never checked | The card contract asks the registry itself before it mints and refuses unless the answer is Real. |
+| Mint their own verified card | Only Tally's attester can ask for a mint. |
+| Buy a verified card, or sell theirs | It can't be transferred. Every transfer is refused. |
+| Keep a verified card after the verdict is corrected | Anyone can ask for a recheck. The contract asks the registry and burns the card. |
+| Take the money out after being caught | `withdraw` asks the registry first and pays only while the card is Real. What a burned card held stays locked: no method moves it, for Tally or anyone. |
+| Drain someone else's verified card | Only its holder can withdraw. |
+| Rewrite or delete a verdict | No method does either. `record` only adds an entry on top, and only the attester can call it. |
+| Put a name on chain | The registry takes a 64-character fingerprint, a verdict and a check id of at most 32 letters, digits, `-` or `_`. Tally's own ids are `tally-<number>`. |
+| Fool an agent into sending its owner's money away | The agent's key is a function-call key for `check` on one contract. NEAR refuses anything else it signs. The demo agent acts this out. |
+| Make an agent overspend | It spends credit its owner loaded and no more. A check with less credit than one fee is refused. |
+| Charge an agent for nothing | No record, no charge. If the registry doesn't answer, nothing is charged. |
+| Pass a sample record off as a real check, or the other way round | Check ids starting `sample-` are the demo's. The route for Tally's own checks refuses them, and the demo only writes them. |
+
+Each refusal is covered by the contracts' unit tests and the run against testnet (`web/scripts/e2e-contracts.mjs`). What none of this stops is under "What you still have to trust".
 
 ### Tally's own checks
 
