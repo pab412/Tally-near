@@ -67,15 +67,16 @@ export default async function CardPage({ params }: Props) {
   const { fingerprint } = await params;
   if (!isFingerprint(fingerprint)) notFound();
 
-  const [record, held, history] = await Promise.all([
+  const [record, held, read] = await Promise.all([
     latestRecord(fingerprint, { contractId: CONTRACT_ID }).then(
       (r) => ({ read: true as const, verdict: r?.latest.verdict ?? null }),
       () => ({ read: false as const, verdict: null }),
     ),
     verifiedCard(fingerprint).catch(() => undefined),
-    cardHistory(fingerprint).catch((err: unknown) => (err instanceof HistoryError ? null : Promise.reject(err))),
+    cardHistory(fingerprint).catch((err: unknown) => (err instanceof HistoryError ? err : Promise.reject(err))),
   ]);
   const real = record.verdict === "Real";
+  const history = read instanceof HistoryError ? null : read;
   const sums = history && held ? addsUp(history, held.holdsYocto) : null;
 
   return (
@@ -152,7 +153,10 @@ export default async function CardPage({ params }: Props) {
       <Section id="history" title="Its history">
         {history === null ? (
           <Note role="alert" head="The history couldn't be read just now.">
-            <p>It comes from an index of NEAR&apos;s transactions, which didn&apos;t answer. What the contract holds, above, is read from NEAR itself.</p>
+            <p>
+              It comes from an index of NEAR&apos;s transactions, and {read instanceof HistoryError ? read.message : "it didn't answer"}. What the contract holds, above, is
+              read from NEAR itself.
+            </p>
           </Note>
         ) : history.events.length ? (
           <>

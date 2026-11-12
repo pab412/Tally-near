@@ -36,7 +36,7 @@ export interface CardHistory {
   complete: boolean;
 }
 
-/** The history couldn't be read from the index. The message is safe to show as is. */
+/** The history couldn't be read from the index. The message says why in a few words, and is safe to show. */
 export class HistoryError extends Error {}
 
 interface Receipt {
@@ -58,11 +58,11 @@ async function ask<T>(doFetch: typeof fetch, path: string, revalidate: number | 
   try {
     res = await doFetch(`${INDEX}${path}`, { signal: AbortSignal.timeout(12_000), next: { revalidate } } as RequestInit);
   } catch {
-    throw new HistoryError("The history couldn't be read right now.");
+    throw new HistoryError("the index couldn't be reached");
   }
-  if (!res.ok) throw new HistoryError("The history couldn't be read right now.");
+  if (!res.ok) throw new HistoryError(`the index answered ${res.status}`);
   return (await res.json().catch(() => {
-    throw new HistoryError("The history couldn't be read right now.");
+    throw new HistoryError("the index answered something that isn't a list");
   })) as T;
 }
 
