@@ -1,97 +1,85 @@
 import { describe, expect, it, vi } from "vitest";
-import { HistoryError, INDEX, addsUp, cardHistory } from "@/lib/card-history";
+import { HistoryError, INDEX, addsUp, cardHistory, happenedIn, type Transaction } from "@/lib/card-history";
 
 const CARD = "card.sample.testnet";
 const FP = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 const OTHER = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-/** A moment, as the index gives it: nanoseconds in a string. `n` seconds after a fixed start. */
-const at = (n: number) => `${(1_794_000_000 + n) * 1000}000000`;
+/** A moment, `n` seconds after a fixed start: as the index gives it (nanoseconds) and as the page shows it (ms). */
+const at = (n: number) => (1_794_000_000 + n) * 1e9;
 const AT = (n: number) => (1_794_000_000 + n) * 1000;
+const b64 = (value: unknown) => btoa(JSON.stringify(value));
 
-interface Fake {
-  receipt_id: string;
-  receiver_account_id: string;
-  predecessor_account_id: string;
-  transaction_hash: string;
-  block: { block_timestamp: string };
-  actions: { method: string; args: { deposit: string; args_json: object } }[];
-  outcome: { status: boolean; result?: string };
-  receipts: Fake[];
-}
 let n = 0;
-/** One call of the card contract, as the index shows it inside a transaction. */
-const call = (method: string, args: object, when: number, more: { deposit?: string; ok?: boolean; result?: unknown; to?: string } = {}): Fake => ({
-  receipt_id: `receipt-${++n}`,
-  receiver_account_id: more.to ?? CARD,
-  predecessor_account_id: "check.sample.testnet",
-  transaction_hash: `tx-${n}`,
-  block: { block_timestamp: at(when) },
-  actions: [{ method, args: { deposit: more.deposit ?? "0", args_json: args } }],
-  outcome: { status: more.ok ?? true, result: more.result === undefined ? "" : btoa(JSON.stringify(more.result)) },
-  receipts: [],
+type Tx = Transaction & { transaction: { hash: string } };
+/** One call the card contract ran, as the index shows it inside a transaction. */
+const call = (method: string, args: object, when: number, more: { deposit?: string; failed?: boolean; answered?: unknown; to?: string; logs?: string[] } = {}) => ({
+  receipt: {
+    receiver_id: more.to ?? CARD,
+    predecessor_id: "check.sample.testnet",
+    block_timestamp: at(when),
+    receipt: { Action: { actions: [{ FunctionCall: { method_name: method, args: b64(args), deposit: more.deposit ?? "0" } }] } },
+  },
+  execution_outcome: { outcome: { logs: more.logs ?? [], status: more.failed ? { Failure: {} } : { SuccessValue: more.answered === undefined ? "" : b64(more.answered) } } },
 });
+/** A transaction holding those calls, under the call that caused them (as a paid check's payment to a card is). */
+const tx = (...calls: ReturnType<typeof call>[]): Tx => ({
+  transaction: { hash: `tx-${++n}` },
+  receipts: [{ receipt: { receiver_id: "check.sample.testnet", predecessor_id: "agent.testnet", block_timestamp: at(0), receipt: { Action: { actions: [{ FunctionCall: { method_name: "check", args: b64({}) } }] } } }, execution_outcome: { outcome: { logs: [], status: { SuccessReceiptId: "next" } } } }, ...calls],
+});
+const event = (name: "nft_mint" | "nft_burn", owner: string, token = FP) => `EVENT_JSON:${JSON.stringify({ standard: "nep171", version: "1.0.0", event: name, data: [{ owner_id: owner, token_ids: [token] }] })}`;
+const mint = (owner: string, when: number, token = FP) => tx(call("on_mint_checked", { fingerprint: token, owner }, when, { logs: [event("nft_mint", owner, token)] }));
+const burn = (owner: string, when: number) => tx(call("on_rechecked", { fingerprint: FP }, when, { logs: [event("nft_burn", owner)] }));
 
-/** NearBlocks' index, faked: the card's mints and burns, and the contract's receipts by method. `cut` names lists that go on past one page. */
-function index({ held = [] as object[], calls = [] as Fake[], cut = [] as string[], down = [] as string[] }) {
-  const asked: string[] = [];
-  const fetch = vi.fn(async (input: string | URL | Request) => {
-    const url = String(input);
-    asked.push(url.replace(INDEX, ""));
-    if (down.some((d) => url.includes(d))) return new Response("no", { status: 500 });
-    const meta = (what: string) => ({ next_page: cut.includes(what) ? "more" : null });
-    if (url.includes(`/nfts/${CARD}/tokens/`)) return Response.json({ data: url.includes(`/tokens/${FP}/`) ? held : [], meta: meta("held") });
-    const method = /receipts\?method=(\w+)/.exec(url)?.[1];
-    // a list row carries the method but not what the call said
-    if (method) return Response.json({ data: calls.filter((c) => c.actions[0].method === method).map((c) => ({ ...c, actions: [{ method }], receipts: undefined })), meta: meta(method) });
-    const tx = /\/txns\/([\w-]+)\/receipts/.exec(url)?.[1];
-    const inside = calls.find((c) => c.transaction_hash === tx);
-    // the call sits under the receipt that caused it, as a paid check's payment to a card does
-    if (inside) return Response.json({ data: { receipt_id: `top-of-${tx}`, receiver_account_id: "check.sample.testnet", actions: [{ method: "check" }], receipts: [inside] } });
-    return new Response("not found", { status: 404 });
+/** FastNEAR's index, faked: the contract's transactions, newest first, and each one in full, twenty at a time. */
+function index(txs: Tx[], { more = false, down = [] as string[] } = {}) {
+  const asked: { path: string; body: Record<string, unknown> }[] = [];
+  const fetch = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+    const path = String(input).replace(INDEX, "");
+    const body = JSON.parse(init!.body as string) as Record<string, unknown>;
+    asked.push({ path, body });
+    if (down.includes(path)) return new Response("no", { status: 429 });
+    if (path === "/account") return Response.json({ account_txs: [...txs].reverse().map((t) => ({ transaction_hash: t.transaction.hash })), resume_token: more ? "more" : null });
+    const wanted = body.tx_hashes as string[];
+    if (wanted.length > 20) return new Response("too many", { status: 400 });
+    return Response.json({ transactions: txs.filter((t) => wanted.includes(t.transaction.hash)) });
   });
   return { fetch: fetch as unknown as typeof globalThis.fetch, asked };
 }
 const read = (fake: ReturnType<typeof index>, fingerprint = FP) => cardHistory(fingerprint, { contractId: CARD, fetch: fake.fetch });
 
-const mint = (account: string, when: number) => ({ cause: "MINT", affected_account_id: account, block_timestamp: at(when), transaction_hash: `mint-${when}` });
-const burn = (account: string, when: number) => ({ cause: "BURN", affected_account_id: account, block_timestamp: at(when), transaction_hash: `burn-${when}` });
-
 describe("a verified card's history", () => {
-  it("lists what happened to the card, oldest first: minted, paid, paid out", async () => {
-    const earned = [call("earn", { fingerprint: FP }, 20, { deposit: "5000" }), call("earn", { fingerprint: FP }, 30, { deposit: "5000" })];
-    const paidOut = call("on_paid_out", { token_id: FP, amount: "7000" }, 40, { result: "7000" });
-    const h = await read(index({ held: [mint("trader.testnet", 10)], calls: [paidOut, ...earned] }));
+  it("lists what happened to the card, oldest first: minted, paid in, paid out", async () => {
+    const txs = [mint("trader.testnet", 10), tx(call("earn", { fingerprint: FP }, 20, { deposit: "5000" })), tx(call("earn", { fingerprint: FP }, 30, { deposit: "5000" })), tx(call("on_paid_out", { token_id: FP, amount: "7000" }, 40, { answered: "7000" }))];
+    const h = await read(index(txs));
     expect(h.events).toEqual([
-      { kind: "minted", atMs: AT(10), tx: "mint-10", account: "trader.testnet" },
-      { kind: "earned", atMs: AT(20), tx: earned[0].transaction_hash, yocto: "5000", from: "check.sample.testnet" },
-      { kind: "earned", atMs: AT(30), tx: earned[1].transaction_hash, yocto: "5000", from: "check.sample.testnet" },
-      { kind: "paid_out", atMs: AT(40), tx: paidOut.transaction_hash, yocto: "7000" },
+      { kind: "minted", atMs: AT(10), tx: txs[0].transaction.hash, account: "trader.testnet" },
+      { kind: "earned", atMs: AT(20), tx: txs[1].transaction.hash, yocto: "5000", from: "check.sample.testnet" },
+      { kind: "earned", atMs: AT(30), tx: txs[2].transaction.hash, yocto: "5000", from: "check.sample.testnet" },
+      { kind: "paid_out", atMs: AT(40), tx: txs[3].transaction.hash, yocto: "7000" },
     ]);
     expect([h.earnedYocto, h.paidOutYocto, h.complete]).toEqual(["10000", "7000", true]);
     expect(h.holders).toEqual([{ account: "trader.testnet", fromMs: AT(10), toMs: null }]);
   });
 
-  it("counts only this card's payments, though the contract's list holds every card's", async () => {
-    const h = await read(index({ held: [mint("trader.testnet", 10)], calls: [call("earn", { fingerprint: OTHER }, 20, { deposit: "9000" }), call("earn", { fingerprint: FP }, 30, { deposit: "5000" })] }));
-    expect(h.earnedYocto).toBe("5000");
+  it("counts only this card's, though the contract's transactions are every card's", async () => {
+    const h = await read(index([mint("trader.testnet", 10), mint("someone.testnet", 11, OTHER), tx(call("earn", { fingerprint: OTHER }, 20, { deposit: "9000" })), tx(call("earn", { fingerprint: FP }, 30, { deposit: "5000" }))]));
+    expect([h.earnedYocto, h.holders.map((x) => x.account)]).toEqual(["5000", ["trader.testnet"]]);
   });
 
   it("leaves out a payment that failed, and a payout that never arrived", async () => {
-    const failed = call("earn", { fingerprint: FP }, 20, { deposit: "5000", ok: false });
-    const bounced = call("on_paid_out", { token_id: FP, amount: "5000" }, 30, { result: "0" });
-    const h = await read(index({ held: [mint("trader.testnet", 10)], calls: [failed, bounced] }));
+    const h = await read(index([mint("trader.testnet", 10), tx(call("earn", { fingerprint: FP }, 20, { deposit: "5000", failed: true })), tx(call("on_paid_out", { token_id: FP, amount: "5000" }, 30, { answered: "0" }))]));
     expect(h.events.map((e) => e.kind)).toEqual(["minted"]);
     expect([h.earnedYocto, h.paidOutYocto]).toEqual(["0", "0"]);
   });
 
-  it("only believes a call that reached the card contract itself", async () => {
-    const elsewhere = call("earn", { fingerprint: FP }, 20, { deposit: "5000", to: "lookalike.testnet" });
-    expect((await read(index({ calls: [elsewhere] }))).earnedYocto).toBe("0");
+  it("only believes what the card contract itself ran: a look-alike's calls and events are nothing", async () => {
+    const elsewhere = { to: "lookalike.testnet" };
+    const h = await read(index([tx(call("earn", { fingerprint: FP }, 20, { deposit: "5000", ...elsewhere }), call("on_mint_checked", {}, 21, { ...elsewhere, logs: [event("nft_mint", "faker.testnet")] }))]));
+    expect(h).toMatchObject({ events: [], earnedYocto: "0", holders: [] });
   });
 
-  it("shows each account that held it, and when the card was burned", async () => {
-    const recheck = call("recheck", { fingerprint: FP }, 49);
-    const h = await read(index({ held: [burn("first.testnet", 50), mint("second.testnet", 60), mint("first.testnet", 10)], calls: [recheck, call("recheck", { fingerprint: OTHER }, 55)] }));
+  it("shows each account that held it, when a recheck was asked for, and when it was burned", async () => {
+    const h = await read(index([mint("first.testnet", 10), tx(call("recheck", { fingerprint: FP }, 49)), tx(call("recheck", { fingerprint: OTHER }, 49)), burn("first.testnet", 50), mint("second.testnet", 60)]));
     expect(h.events.map((e) => e.kind)).toEqual(["minted", "rechecked", "burned", "minted"]);
     expect(h.holders).toEqual([
       { account: "first.testnet", fromMs: AT(10), toMs: AT(50) },
@@ -100,28 +88,43 @@ describe("a verified card's history", () => {
   });
 
   it("has nothing for a card that never had a verified card", async () => {
-    expect(await read(index({ calls: [call("earn", { fingerprint: OTHER }, 20, { deposit: "1" })] }))).toEqual({ events: [], holders: [], earnedYocto: "0", paidOutYocto: "0", complete: true });
+    expect(await read(index([tx(call("earn", { fingerprint: OTHER }, 20, { deposit: "1" }))]))).toEqual({ events: [], holders: [], earnedYocto: "0", paidOutYocto: "0", complete: true });
   });
 
-  it("says when a list was cut off, so a total is never passed off as the whole", async () => {
-    for (const cut of ["held", "earn", "on_paid_out", "recheck"]) expect((await read(index({ held: [mint("t.testnet", 1)], cut: [cut] }))).complete, cut).toBe(false);
+  it("says when the contract has more transactions than were read, so a total is never passed off as the whole", async () => {
+    expect((await read(index([mint("t.testnet", 1)], { more: true }))).complete).toBe(false);
   });
 
-  it("fails as a whole when the index can't be read, never with half a history", async () => {
-    for (const down of ["/nfts/", "method=earn", "/txns/"]) {
-      await expect(read(index({ held: [mint("t.testnet", 1)], calls: [call("earn", { fingerprint: FP }, 2, { deposit: "1" })], down: [down] })), down).rejects.toBeInstanceOf(HistoryError);
+  it("fails as a whole when the index can't be read, never with half a history, and says why", async () => {
+    for (const down of ["/account", "/transactions"]) {
+      await expect(read(index([mint("t.testnet", 1)], { down: [down] })), down).rejects.toThrow(new HistoryError("the index answered 429"));
     }
   });
 
-  it("asks the index about this card and this contract only, and sends nothing else", async () => {
-    const fake = index({ held: [mint("t.testnet", 1)] });
+  it("asks for the contract's transactions once, then each in full twenty at a time, and reads none twice", async () => {
+    const txs = Array.from({ length: 45 }, (_, i) => tx(call("earn", { fingerprint: FP }, i + 1, { deposit: "1" })));
+    const fake = index(txs);
+    expect((await read(fake)).earnedYocto).toBe("45");
+    expect(fake.asked.map((a) => a.path)).toEqual(["/account", "/transactions", "/transactions", "/transactions"]);
+    expect(fake.asked[0].body).toEqual({ account_id: CARD, limit: 200 });
+    expect(fake.asked.slice(1).map((a) => (a.body.tx_hashes as string[]).length)).toEqual([20, 20, 5]);
+    // what a transaction did never changes: a second look only asks which transactions there are
     await read(fake);
-    expect(fake.asked.sort()).toEqual([
-      `/accounts/${CARD}/receipts?method=earn&limit=100`,
-      `/accounts/${CARD}/receipts?method=on_paid_out&limit=100`,
-      `/accounts/${CARD}/receipts?method=recheck&limit=100`,
-      `/nfts/${CARD}/tokens/${FP}/txns?limit=100`,
+    expect(fake.asked.slice(4).map((a) => a.path)).toEqual(["/account"]);
+  });
+});
+
+describe("what one transaction did", () => {
+  it("is read from the call's own arguments, its deposit and the contract's answer", () => {
+    const t = tx(call("earn", { fingerprint: FP }, 5, { deposit: "42" }), call("on_paid_out", { token_id: OTHER, amount: "9" }, 6, { answered: "9" }));
+    expect(happenedIn(t, CARD)).toEqual([
+      { kind: "earned", fingerprint: FP, atMs: AT(5), tx: t.transaction.hash, yocto: "42", from: "check.sample.testnet" },
+      { kind: "paid_out", fingerprint: OTHER, atMs: AT(6), tx: t.transaction.hash, yocto: "9" },
     ]);
+  });
+
+  it("is nothing for a transaction that is empty, unreadable or about something else", () => {
+    expect([happenedIn({}, CARD), happenedIn({ transaction: { hash: "t" } }, CARD), happenedIn(tx(call("nft_token", { token_id: FP }, 1, { logs: ["not an event", "EVENT_JSON:{broken"] })), CARD)]).toEqual([[], [], []]);
   });
 });
 

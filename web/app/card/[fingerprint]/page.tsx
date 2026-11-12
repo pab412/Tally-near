@@ -181,7 +181,7 @@ export default async function CardPage({ params }: Props) {
                 <Events history={history} />
               </Frame>
             </div>
-            {!history.complete && <p className="muted">Only the contract&apos;s latest 100 payments were read, so older ones may be missing here.</p>}
+            {!history.complete && <p className="muted">Only the contract&apos;s latest 200 transactions were read, so older payments may be missing here.</p>}
           </>
         ) : (
           <p className="muted">Nothing has happened to this card on the card contract.</p>
@@ -191,11 +191,11 @@ export default async function CardPage({ params }: Props) {
           <a href={explorerAccountUrl(CARD_CONTRACT_ID)} target="_blank" rel="noreferrer">
             {CARD_CONTRACT_ID} <ExternalIcon />
           </a>{" "}
-          on NEAR testnet, listed by an index of NEAR&apos;s transactions (powered by{" "}
-          <a href="https://nearblocks.io" target="_blank" rel="noreferrer">
-            Nearblocks.io APIs <ExternalIcon />
-          </a>
-          ). Holders are shown by their NEAR account names, which are already public on NEAR.
+          on NEAR testnet, listed by{" "}
+          <a href="https://fastnear.com" target="_blank" rel="noreferrer">
+            FastNEAR&apos;s <ExternalIcon />
+          </a>{" "}
+          index of NEAR&apos;s transactions. Holders are shown by their NEAR account names, which are already public on NEAR.
         </p>
       </Section>
 

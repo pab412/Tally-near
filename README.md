@@ -78,7 +78,7 @@ An agent can follow the same steps from one file: [tally-near.vercel.app/SKILL.m
 | Demo agent | `web/scripts/demo-agent.mjs` | One command. It makes a throwaway testnet account, loads credit, pays for two checks with a limited key and decides whether to copy each trader. |
 | Plug-in for Claude Code and Codex | `mcp` | An MCP server with three free reads: `check_card`, `card_history` and `fingerprint_file`. No key, nothing paid, nothing written. 10 tests pass, and `node try.mjs` asks NEAR for real. |
 | Shared types | `contracts/types` | What the contracts agree on: a fingerprint, the verdicts, a record, the allow / warn / block rule, and how the paid check talks to the card contract. 8 unit tests pass. |
-| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 135 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
+| Demo page | `web` | Look a card up on NEAR from your browser, record a sample check, mint or recheck a verified card, and see its picture drawn at `/badge/<fingerprint>.png`. 137 tests pass. Live at [tally-near.vercel.app](https://tally-near.vercel.app). |
 
 On the site each part is labelled "Live on testnet": all three contracts answer at their `notpab.testnet` addresses. The guard wallet answers at `tally-guard.testnet`.
 
@@ -318,7 +318,7 @@ It reads through the site's own code: one read (`web/scripts/near-read.mjs`) and
 - **How it works** (`/how-it-works`): three steps beside the real parts they describe: a card and its fingerprint, a card's history, and a record read live from NEAR. Then what goes on NEAR and what never does, and the technical details in rows that open.
 - **Verified cards** (`/verified-cards`): what the NFT is and stores, its three rules, how a card gets one and how it holds money. Then, in rows that open, its methods and what the contract answers, word for word, when someone tries something it doesn't allow.
 - **For AI agents** (`/agents`): two halves. For AI operators: what the paid check does, what it costs (read live from the contract), what the agent's key can and can't do, and how to run the demo agent. For developers: the endpoint and contracts, each free read method with the call to copy (built by the same code the site uses) and NEAR's answer read on the spot, the paid check's methods, what `check` answers, and every error word for word. For wallet builders: the lines a wallet adds to ask the registry before it pays, and the guard wallet's methods.
-- **A verified card's own page** (`/card/<fingerprint>`): who holds the badge, what it holds, what was paid in and paid out in all, each account that has held it, and everything that happened to it, oldest first, each with its transaction. The contract keeps what a card holds now, not how it got there, so the history is the calls made to the card contract, listed by NearBlocks' public index of NEAR testnet (`web/lib/card-history.ts`). When every payment was found, the page checks that paid in, less paid out, is what the contract says the card holds. Holders are shown by their NEAR account names, which are already public on NEAR. The ledger's Verified cards tab links to it. A card that holds something also has **See Solana payout**: type any Solana address and you see a live quote from NEAR Intents (the 1Click API) for what the card holds, as SOL. It is labelled "Quote, not a payout": 1Click works with real NEAR on mainnet and these badges are on testnet, so nothing is sent. Every request is a dry run, the amount is read from the contract, and the address typed isn't stored (`web/lib/intents.ts`).
+- **A verified card's own page** (`/card/<fingerprint>`): who holds the badge, what it holds, what was paid in and paid out in all, each account that has held it, and everything that happened to it, oldest first, each with its transaction. The contract keeps what a card holds now, not how it got there, so the history is the calls made to the card contract, listed by FastNEAR's public index of NEAR testnet (`web/lib/card-history.ts`). When every payment was found, the page checks that paid in, less paid out, is what the contract says the card holds. Holders are shown by their NEAR account names, which are already public on NEAR. The ledger's Verified cards tab links to it. A card that holds something also has **See Solana payout**: type any Solana address and you see a live quote from NEAR Intents (the 1Click API) for what the card holds, as SOL. It is labelled "Quote, not a payout": 1Click works with real NEAR on mainnet and these badges are on testnet, so nothing is sent. Every request is a dry run, the amount is read from the contract, and the address typed isn't stored (`web/lib/intents.ts`).
 - **FAQ** (`/faq`): short answers in four groups, with a search box.
 
 The demo itself is at `/demo`, with three tabs:
@@ -352,7 +352,7 @@ cd web
 npm test
 ```
 
-You should see `135 passed`.
+You should see `137 passed`.
 
 ### Try recording yourself
 

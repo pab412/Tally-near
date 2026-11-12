@@ -2,21 +2,21 @@
 //
 // The card contract keeps what a card holds now, not how it got there. The history is the contract's own receipts on
 // NEAR: every mint, burn, payment in (`earn`), payout (`on_paid_out`) and recheck is a call anyone can see. NEAR's
-// nodes answer for one transaction at a time, so the list comes from NearBlocks' public index of testnet
-// (api-testnet.nearblocks.io, v3; no key). Nothing here is written by Tally, and nothing is stored by this site.
+// nodes answer for one transaction at a time, so the list comes from FastNEAR's public index of testnet
+// (tx.test.fastnear.com, the same provider as the NEAR node this site reads; no key). Nothing here is written by
+// Tally, and nothing is stored by this site.
 //
-// The index can't filter by card, so each list is the contract's latest receipts for every card, read through to
-// find this one's. When a list is cut off at its first page, `complete` is false and the totals are only what was
-// found; the page then says so and shows what the contract itself holds.
+// The index lists the contract's transactions for every card, so they are read through to find this card's. Only the
+// latest `MOST` are read: when there are more, `complete` is false and the totals are only what was found; the page
+// then says so and shows what the contract itself holds.
 
 import { CARD_CONTRACT_ID } from "./near";
 
-/** NearBlocks' public API for NEAR testnet. */
-export const INDEX = "https://api-testnet.nearblocks.io/v3";
-/** The most receipts read from one list. */
-const PAGE = 100;
-/** A list changes as things happen; one transaction never changes once it is final. */
-const LIST_SECONDS = 60;
+/** FastNEAR's transactions API for NEAR testnet. */
+export const INDEX = "https://tx.test.fastnear.com/v0";
+/** The most transactions read, and how many the index gives in full at a time. */
+const MOST = 200;
+const BATCH = 20;
 
 export type CardEvent =
   | { kind: "minted" | "burned"; atMs: number; tx: string; account: string }
@@ -32,31 +32,45 @@ export interface CardHistory {
   holders: { account: string; fromMs: number; toMs: number | null }[];
   earnedYocto: string;
   paidOutYocto: string;
-  /** false when a list was longer than one page, so older payments may be missing */
+  /** false when the contract has more transactions than were read, so older payments may be missing */
   complete: boolean;
 }
 
 /** The history couldn't be read from the index. The message says why in a few words, and is safe to show. */
 export class HistoryError extends Error {}
 
+/** One receipt of a transaction, as the index gives it. */
 interface Receipt {
-  receipt_id?: string;
-  receiver_account_id?: string;
-  predecessor_account_id?: string;
-  transaction_hash?: string;
-  block?: { block_timestamp?: string };
-  actions?: { method?: string | null; args?: { deposit?: string; args_json?: Record<string, unknown> | null } }[];
-  outcome?: { status?: boolean; result?: string };
+  receipt?: {
+    receiver_id?: string;
+    predecessor_id?: string;
+    block_timestamp?: number | string;
+    receipt?: { Action?: { actions?: { FunctionCall?: { method_name?: string; args?: string; deposit?: string } }[] } };
+  };
+  execution_outcome?: { outcome?: { logs?: string[]; status?: Record<string, unknown> } };
+}
+export interface Transaction {
+  transaction?: { hash?: string };
   receipts?: Receipt[];
 }
 
-const ZERO = BigInt(0);
-const ms = (nanoseconds: string | undefined) => Number(BigInt(nanoseconds ?? "0") / BigInt(1_000_000));
+/** Something that happened to some card: an event and the card it happened to. */
+type Happened = CardEvent & { fingerprint: string };
 
-async function ask<T>(doFetch: typeof fetch, path: string, revalidate: number | false): Promise<T> {
+const ZERO = BigInt(0);
+const amount = (value: unknown) => (typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : ZERO);
+const json = (base64: unknown): unknown => {
+  try {
+    return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(String(base64)), (c) => c.charCodeAt(0))));
+  } catch {
+    return null;
+  }
+};
+
+async function ask<T>(doFetch: typeof fetch, path: string, body: object): Promise<T> {
   let res: Response;
   try {
-    res = await doFetch(`${INDEX}${path}`, { signal: AbortSignal.timeout(12_000), next: { revalidate } } as RequestInit);
+    res = await doFetch(`${INDEX}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(12_000), cache: "no-store" });
   } catch {
     throw new HistoryError("the index couldn't be reached");
   }
@@ -66,74 +80,78 @@ async function ask<T>(doFetch: typeof fetch, path: string, revalidate: number | 
   })) as T;
 }
 
-/** Every receipt in a transaction, the ones it caused included. */
-function* all(receipt: Receipt | undefined): Generator<Receipt> {
-  if (!receipt) return;
-  yield receipt;
-  for (const child of receipt.receipts ?? []) yield* all(child);
-}
-
 /**
- * The card contract's successful calls of one method, each with the arguments it was called with. The list gives
- * which receipts; each transaction is then read for what the call said.
+ * What one transaction did to verified cards. Only a receipt the card contract itself ran, and ran successfully, is
+ * believed: a call to a look-alike contract, or one that failed, is nothing.
  */
-async function calls(method: string, contractId: string, doFetch: typeof fetch) {
-  const list = await ask<{ data?: Receipt[]; meta?: { next_page?: string | null } }>(doFetch, `/accounts/${contractId}/receipts?method=${method}&limit=${PAGE}`, LIST_SECONDS);
-  const done = (list.data ?? []).filter((r) => r.outcome?.status && r.receipt_id && r.transaction_hash);
-  const found = await Promise.all(
-    done.map(async (listed) => {
-      const tx = await ask<{ data?: Receipt }>(doFetch, `/txns/${listed.transaction_hash}/receipts`, false);
-      const receipt = [...all(tx.data)].find((r) => r.receipt_id === listed.receipt_id && r.receiver_account_id === contractId);
-      const action = receipt?.actions?.find((a) => a.method === method);
-      return action && receipt ? { receipt, args: action.args?.args_json ?? {}, deposit: action.args?.deposit ?? "0", tx: listed.transaction_hash! } : null;
-    }),
-  );
-  return { calls: found.filter((c) => c !== null), complete: !list.meta?.next_page };
-}
-
-const amount = (value: unknown) => (typeof value === "string" && /^\d+$/.test(value) ? BigInt(value) : ZERO);
-
-/** What a call answered, when it answered a number in a string (a U128), as `on_paid_out` does. */
-function answered(receipt: Receipt): bigint {
-  try {
-    return amount(JSON.parse(atob(receipt.outcome?.result ?? "")));
-  } catch {
-    return ZERO;
+export function happenedIn(tx: Transaction, contractId: string): Happened[] {
+  const hash = tx.transaction?.hash;
+  if (!hash) return [];
+  const out: Happened[] = [];
+  for (const { receipt, execution_outcome } of tx.receipts ?? []) {
+    const status = execution_outcome?.outcome?.status ?? {};
+    if (receipt?.receiver_id !== contractId || !("SuccessValue" in status || "SuccessReceiptId" in status)) continue;
+    const atMs = Math.floor(Number(receipt.block_timestamp ?? 0) / 1e6);
+    for (const { FunctionCall: call } of receipt.receipt?.Action?.actions ?? []) {
+      const args = (json(call?.args) ?? {}) as Record<string, unknown>;
+      const card = (name: string) => (typeof args[name] === "string" ? (args[name] as string) : "");
+      if (call?.method_name === "earn" && amount(call.deposit) > ZERO) {
+        out.push({ kind: "earned", fingerprint: card("fingerprint"), atMs, tx: hash, yocto: call.deposit!, from: receipt.predecessor_id ?? "" });
+      }
+      if (call?.method_name === "on_paid_out") {
+        // the contract answers what really left: nothing when the payout didn't arrive and went back into the card
+        const left = amount(json(status.SuccessValue));
+        if (left > ZERO) out.push({ kind: "paid_out", fingerprint: card("token_id"), atMs, tx: hash, yocto: left.toString() });
+      }
+      if (call?.method_name === "recheck") out.push({ kind: "rechecked", fingerprint: card("fingerprint"), atMs, tx: hash });
+    }
+    // a mint or a burn is the NFT standard's own event, logged by the contract
+    for (const log of execution_outcome?.outcome?.logs ?? []) {
+      if (!log.startsWith("EVENT_JSON:")) continue;
+      let event: { standard?: unknown; event?: unknown; data?: { owner_id?: unknown; token_ids?: unknown }[] } | null = null;
+      try {
+        event = JSON.parse(log.slice("EVENT_JSON:".length));
+      } catch {
+        continue;
+      }
+      const kind = event?.standard !== "nep171" ? null : event.event === "nft_mint" ? "minted" : event.event === "nft_burn" ? "burned" : null;
+      if (!kind || !Array.isArray(event?.data)) continue;
+      for (const d of event.data) {
+        if (typeof d?.owner_id !== "string" || !Array.isArray(d.token_ids)) continue;
+        for (const id of d.token_ids) if (typeof id === "string") out.push({ kind, fingerprint: id, atMs, tx: hash, account: d.owner_id });
+      }
+    }
   }
+  return out;
 }
 
-/** A verified card's history, read from the card contract's receipts. Throws HistoryError when the index can't be read. */
+// what a transaction did never changes, so it is read from the index once by each running copy of the site
+const known = new Map<string, Happened[]>();
+
+/** A verified card's history, read from the card contract's transactions. Throws HistoryError when the index can't be read. */
 export async function cardHistory(fingerprint: string, opts: { contractId?: string; fetch?: typeof fetch } = {}): Promise<CardHistory> {
   const contractId = opts.contractId ?? CARD_CONTRACT_ID;
   const doFetch = opts.fetch ?? fetch;
-  const [held, earned, paid, rechecks] = await Promise.all([
-    ask<{ data?: { cause?: string; affected_account_id?: string; block_timestamp?: string; transaction_hash?: string }[]; meta?: { next_page?: string | null } }>(
-      doFetch,
-      `/nfts/${contractId}/tokens/${fingerprint}/txns?limit=${PAGE}`,
-      LIST_SECONDS,
-    ),
-    calls("earn", contractId, doFetch),
-    calls("on_paid_out", contractId, doFetch),
-    calls("recheck", contractId, doFetch),
-  ]);
+  const list = await ask<{ account_txs?: { transaction_hash?: string }[]; resume_token?: string | null }>(doFetch, "/account", { account_id: contractId, limit: MOST });
+  const hashes = (list.account_txs ?? []).map((row) => row.transaction_hash).filter((h): h is string => typeof h === "string");
 
-  const events: CardEvent[] = [];
-  for (const h of held.data ?? []) {
-    const kind = h.cause === "MINT" ? "minted" : h.cause === "BURN" ? "burned" : null;
-    if (kind && h.affected_account_id && h.transaction_hash) events.push({ kind, atMs: ms(h.block_timestamp), tx: h.transaction_hash, account: h.affected_account_id });
+  const key = (hash: string) => `${contractId}:${hash}`;
+  const unread = hashes.filter((h) => !known.has(key(h)));
+  const batches = Array.from({ length: Math.ceil(unread.length / BATCH) }, (_, i) => unread.slice(i * BATCH, (i + 1) * BATCH));
+  for (const { transactions } of await Promise.all(batches.map((tx_hashes) => ask<{ transactions?: Transaction[] }>(doFetch, "/transactions", { tx_hashes })))) {
+    for (const tx of transactions ?? []) if (tx.transaction?.hash) known.set(key(tx.transaction.hash), happenedIn(tx, contractId));
   }
-  for (const c of earned.calls) {
-    if (c.args.fingerprint === fingerprint && amount(c.deposit) > ZERO) events.push({ kind: "earned", atMs: ms(c.receipt.block?.block_timestamp), tx: c.tx, yocto: c.deposit, from: c.receipt.predecessor_account_id ?? "" });
-  }
-  for (const c of paid.calls) {
-    // the contract answers what really left: nothing when the payout didn't arrive and went back into the card
-    const left = answered(c.receipt);
-    if (c.args.token_id === fingerprint && left > ZERO) events.push({ kind: "paid_out", atMs: ms(c.receipt.block?.block_timestamp), tx: c.tx, yocto: left.toString() });
-  }
-  for (const c of rechecks.calls) {
-    if (c.args.fingerprint === fingerprint) events.push({ kind: "rechecked", atMs: ms(c.receipt.block?.block_timestamp), tx: c.tx });
-  }
-  events.sort((a, b) => a.atMs - b.atMs);
+  if (known.size > 5_000) known.clear();
+
+  const events: CardEvent[] = hashes
+    .flatMap((h) => known.get(key(h)) ?? [])
+    .filter((e) => e.fingerprint === fingerprint)
+    .map((e): CardEvent => {
+      const event: Partial<Happened> = { ...e };
+      delete event.fingerprint;
+      return event as CardEvent;
+    })
+    .sort((a, b) => a.atMs - b.atMs);
 
   const holders: CardHistory["holders"] = [];
   for (const e of events) {
@@ -141,13 +159,7 @@ export async function cardHistory(fingerprint: string, opts: { contractId?: stri
     if (e.kind === "burned" && holders.length) holders[holders.length - 1].toMs = e.atMs;
   }
   const total = (kind: "earned" | "paid_out") => events.reduce((sum, e) => (e.kind === kind ? sum + BigInt(e.yocto) : sum), ZERO).toString();
-  return {
-    events,
-    holders,
-    earnedYocto: total("earned"),
-    paidOutYocto: total("paid_out"),
-    complete: earned.complete && paid.complete && rechecks.complete && !held.meta?.next_page,
-  };
+  return { events, holders, earnedYocto: total("earned"), paidOutYocto: total("paid_out"), complete: !list.resume_token };
 }
 
 /**
