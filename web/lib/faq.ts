@@ -45,7 +45,7 @@ export const FAQ: readonly QuestionGroup[] = [
       },
       {
         q: "What was built for the hackathon?",
-        a: "Everything on NEAR: the three contracts and this site. Tally itself (reading cards and checking them) existed before and isn't part of the entry.",
+        a: "Everything on NEAR: the registry, the verified card, the paid check, an example wallet that asks before it pays, this site, and a plug-in for coding agents. Tally itself (reading cards and checking them) existed before and isn't part of the entry.",
       },
     ],
   },
