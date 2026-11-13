@@ -1,7 +1,7 @@
 // What the site's reading pages share: the page frame, a page's title, a numbered step and the way onward.
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { ViewTransition, type ReactNode } from "react";
 import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID } from "@/lib/near";
 import { ExternalIcon } from "./icons";
 import { Contracts, SiteHeader, type PageId } from "./parts";
@@ -13,7 +13,9 @@ export function DocPage({ current, children }: { current: PageId; children: Reac
   return (
     <div className="shell">
       <SiteHeader current={current} />
-      <main className="doc">{children}</main>
+      <ViewTransition enter="page-in" exit="page-out" default="none">
+        <main className="doc">{children}</main>
+      </ViewTransition>
       <Contracts ids={[CONTRACT_ID, CARD_CONTRACT_ID, CHECK_CONTRACT_ID]}>
         <p>
           Built for the NEAR Hackathon, November 2026.{" "}

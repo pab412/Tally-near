@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, ViewTransition, type DragEvent } from "react";
 import { fingerprint, recordPath } from "@/lib/fingerprint";
 import {
   CHECK_CONTRACT_ID,
@@ -19,7 +19,8 @@ import {
 import { CardPanel } from "./card-panel";
 import { useRecordLink } from "./copy-link";
 import { ExternalIcon, UploadIcon } from "./icons";
-import { Busy, Contracts, Fact, Finding, Fingerprint, Frame, History, Note, RecordFacts, SAMPLES, SiteHeader, SwitchedOff, send, type Card, type LookState } from "./parts";
+import { Fingerprint, LiveBlock } from "./motion";
+import { Busy, Contracts, Fact, Finding, Frame, History, Note, RecordFacts, SAMPLES, SiteHeader, SwitchedOff, send, type Card, type LookState } from "./parts";
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
@@ -131,136 +132,141 @@ export default function TallyDemo({
   return (
     <div className="shell">
       <SiteHeader current="demo" />
-      <div className="toolbar">
-        <div className="tabs" role="tablist" aria-label="What to do">
-          <button role="tab" id="tab-lookup" aria-selected={tab === "lookup"} aria-controls="panel" onClick={() => setTab("lookup")}>
-            Look up a card
-          </button>
-          <button role="tab" id="tab-record" aria-selected={tab === "record"} aria-controls="panel" onClick={() => setTab("record")}>
-            Record a check
-          </button>
-          <button role="tab" id="tab-card" aria-selected={tab === "card"} aria-controls="panel" onClick={() => setTab("card")}>
-            Verified card
-          </button>
-        </div>
-        <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
-          <span className="dot" aria-hidden /> Live on NEAR testnet
-        </a>
-      </div>
-
-      <main className="stage" data-linked={(card && !card.preview) || undefined}>
-        <section className="cardside" aria-label="The card">
-          <div>
-            <label
-              className="bay"
-              data-dragging={dragging || undefined}
-              data-scanning={hashing || look.phase === "checking" || undefined}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={onDrop}
-            >
-              <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => void pickFile(e.target.files?.[0])} />
-              {card?.preview ? (
-                // eslint-disable-next-line @next/next/no-img-element -- a local object URL or a sample, shown as it is
-                <img src={card.preview} alt={`The card you picked: ${card.name}`} />
-              ) : (
-                <span className="bay-empty">
-                  <UploadIcon />
-                  <strong>{card ? "Opened from a link" : "Drop a PnL card here"}</strong>
-                  <span>
-                    {card
-                      ? "There's no picture, only its fingerprint. Got the card? Drop it here to see if it's the same one."
-                      : "or click to choose a picture. It never leaves your device."}
-                  </span>
-                </span>
-              )}
-            </label>
-            {card?.preview && (
-              <p className="bay-caption">
-                <b>
-                  {card.sample && <span className="sample-tag">SAMPLE</span>}
-                  {card.sample ? SAMPLES.find((x) => x.file === card.name)?.label : card.name}
-                </b>
-                Drop or click the card to change it
-              </p>
-            )}
+      {/* the demo arrives and leaves the way a reading page does (doc-parts.tsx, DocPage) */}
+      <ViewTransition enter="page-in" exit="page-out" default="none">
+        <div>
+          <div className="toolbar">
+            <div className="tabs" role="tablist" aria-label="What to do">
+              <button role="tab" id="tab-lookup" aria-selected={tab === "lookup"} aria-controls="panel" onClick={() => setTab("lookup")}>
+                Look up a card
+              </button>
+              <button role="tab" id="tab-record" aria-selected={tab === "record"} aria-controls="panel" onClick={() => setTab("record")}>
+                Record a check
+              </button>
+              <button role="tab" id="tab-card" aria-selected={tab === "card"} aria-controls="panel" onClick={() => setTab("card")}>
+                Verified card
+              </button>
+            </div>
+            <a className="network" href={explorerAccountUrl(contractId)} target="_blank" rel="noreferrer">
+              <span className="dot" aria-hidden /> <LiveBlock />
+            </a>
           </div>
-          {pickError && (
-            <p className="field-error" role="alert">
-              {pickError}
-            </p>
-          )}
 
-          <div className="samples">
-            <p className="label">No card to hand? Try a made-up one</p>
-            <ul>
-              {SAMPLES.map((x) => (
-                <li key={x.file}>
-                  <button type="button" className="sample-btn" aria-pressed={card?.name === x.file} onClick={() => void pickSample(x.file)}>
-                    <Image src={`/samples/${x.file}`} alt="" width={1600} height={900} sizes="(max-width: 940px) 30vw, 190px" />
-                    <span>
-                      {x.label}
-                      <small>{x.hint}</small>
+          <main className="stage" data-linked={(card && !card.preview) || undefined}>
+            <section className="cardside" aria-label="The card">
+              <div>
+                <label
+                  className="bay"
+                  data-dragging={dragging || undefined}
+                  data-scanning={hashing || look.phase === "checking" || undefined}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragging(true);
+                  }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={onDrop}
+                >
+                  <input type="file" accept="image/*" className="visually-hidden" onChange={(e) => void pickFile(e.target.files?.[0])} />
+                  {card?.preview ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- a local object URL or a sample, shown as it is
+                    <img src={card.preview} alt={`The card you picked: ${card.name}`} />
+                  ) : (
+                    <span className="bay-empty">
+                      <UploadIcon />
+                      <strong>{card ? "Opened from a link" : "Drop a PnL card here"}</strong>
+                      <span>
+                        {card
+                          ? "There's no picture, only its fingerprint. Got the card? Drop it here to see if it's the same one."
+                          : "or click to choose a picture. It never leaves your device."}
+                      </span>
                     </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+                  )}
+                </label>
+                {card?.preview && (
+                  <p className="bay-caption">
+                    <b>
+                      {card.sample && <span className="sample-tag">SAMPLE</span>}
+                      {card.sample ? SAMPLES.find((x) => x.file === card.name)?.label : card.name}
+                    </b>
+                    Drop or click the card to change it
+                  </p>
+                )}
+              </div>
+              {pickError && (
+                <p className="field-error" role="alert">
+                  {pickError}
+                </p>
+              )}
 
-          <div className="fingerprint" aria-live="polite">
-            <p className="label">
-              <span>Fingerprint</span>
-              <span>SHA-256 of the picture, computed on your device</span>
-            </p>
-            {hashing ? (
-              <p className="muted">Computing…</p>
-            ) : card ? (
-              <>
-                <Fingerprint fp={card.fp} />
-              </>
-            ) : (
-              <p className="muted">It appears here once you pick a card. Only this goes to NEAR.</p>
-            )}
-          </div>
-        </section>
+              <div className="samples">
+                <p className="label">No card to hand? Try a made-up one</p>
+                <ul>
+                  {SAMPLES.map((x) => (
+                    <li key={x.file}>
+                      <button type="button" className="sample-btn" aria-pressed={card?.name === x.file} onClick={() => void pickSample(x.file)}>
+                        <Image src={`/samples/${x.file}`} alt="" width={1600} height={900} sizes="(max-width: 940px) 30vw, 190px" />
+                        <span>
+                          {x.label}
+                          <small>{x.hint}</small>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-        <section className="panel" id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-          {tab === "lookup" ? (
-            <LookupPanel
-              look={look}
-              txHash={card ? txByCard[card.fp] : undefined}
-              contractId={contractId}
-              onRetry={() => card && void check(card.fp)}
-              onShowCard={() => setTab("card")}
-            />
-          ) : tab === "card" ? (
-            <CardPanel
-              key={card?.fp ?? "none"}
-              card={card}
-              look={look}
-              canMint={canMint}
-              cardContractId={cardContractId}
-              onChanged={() => card && void ask(card.fp).then(setLook)}
-              onRetry={() => card && void check(card.fp)}
-            />
-          ) : (
-            <RecordPanel
-              key={card?.fp ?? "none"}
-              card={card}
-              canRecord={canRecord}
-              onRecorded={(fp, txHash) => {
-                setTxByCard((m) => ({ ...m, [fp]: txHash }));
-                void check(fp);
-              }}
-              onShowLookup={() => setTab("lookup")}
-            />
-          )}
-        </section>
-      </main>
+              <div className="fingerprint" aria-live="polite">
+                <p className="label">
+                  <span>Fingerprint</span>
+                  <span>SHA-256 of the picture, computed on your device</span>
+                </p>
+                {hashing ? (
+                  <p className="muted">Computing…</p>
+                ) : card ? (
+                  <>
+                    <Fingerprint fp={card.fp} />
+                  </>
+                ) : (
+                  <p className="muted">It appears here once you pick a card. Only this goes to NEAR.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="panel" id="panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
+              {tab === "lookup" ? (
+                <LookupPanel
+                  look={look}
+                  txHash={card ? txByCard[card.fp] : undefined}
+                  contractId={contractId}
+                  onRetry={() => card && void check(card.fp)}
+                  onShowCard={() => setTab("card")}
+                />
+              ) : tab === "card" ? (
+                <CardPanel
+                  key={card?.fp ?? "none"}
+                  card={card}
+                  look={look}
+                  canMint={canMint}
+                  cardContractId={cardContractId}
+                  onChanged={() => card && void ask(card.fp).then(setLook)}
+                  onRetry={() => card && void check(card.fp)}
+                />
+              ) : (
+                <RecordPanel
+                  key={card?.fp ?? "none"}
+                  card={card}
+                  canRecord={canRecord}
+                  onRecorded={(fp, txHash) => {
+                    setTxByCard((m) => ({ ...m, [fp]: txHash }));
+                    void check(fp);
+                  }}
+                  onShowLookup={() => setTab("lookup")}
+                />
+              )}
+            </section>
+          </main>
+        </div>
+      </ViewTransition>
 
       <Contracts ids={[contractId, cardContractId, CHECK_CONTRACT_ID]} />
     </div>

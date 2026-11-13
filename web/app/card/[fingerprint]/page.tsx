@@ -6,6 +6,7 @@ import { badgePath, isFingerprint, recordPath } from "@/lib/fingerprint";
 import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, explorerAccountUrl, explorerTxUrl, formatMoment, latestRecord, shortFingerprint, verifiedCard, type Verdict } from "@/lib/near";
 import { DocPage, Onward, PageHead, Section } from "../../doc-parts";
 import { ExternalIcon } from "../../icons";
+import { Tilt } from "../../motion";
 import { Fact, Finding, Frame, LiveTag, Note } from "../../parts";
 import SolanaQuote from "./sol-quote";
 
@@ -130,8 +131,10 @@ export default async function CardPage({ params }: Props) {
 
         {held && real ? (
           <div className="badge-art">
-            {/* eslint-disable-next-line @next/next/no-img-element -- drawn fresh by /badge each time, so it's never a stale copy */}
-            <img src={badgePath(fingerprint)} alt="This verified card's picture: the card with a Verified on NEAR stamp" width={1200} height={1200} />
+            <Tilt>
+              {/* eslint-disable-next-line @next/next/no-img-element -- drawn fresh by /badge each time, so it's never a stale copy */}
+              <img src={badgePath(fingerprint)} alt="This verified card's picture: the card with a Verified on NEAR stamp" width={1200} height={1200} />
+            </Tilt>
             <p>The picture wallets and explorers show for this NFT.</p>
           </div>
         ) : (

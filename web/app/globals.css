@@ -31,7 +31,18 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 .bg::before{content:"";position:absolute;inset:-30%;transform:rotate(-28deg);
  background:radial-gradient(48% 2.6% at 70% 34%,rgba(255,36,139,.13),transparent 70%),radial-gradient(34% 1.6% at 63% 38.5%,rgba(178,102,255,.1),transparent 70%),radial-gradient(42% 2.2% at 30% 60%,rgba(255,36,139,.08),transparent 70%),radial-gradient(30% 1.4% at 37% 64%,rgba(150,96,255,.08),transparent 70%),radial-gradient(38% 1.8% at 78% 76%,rgba(255,70,170,.07),transparent 70%)}
 
+/* under a mouse, one soft light behind the page follows the pointer (motion.tsx, SiteMotion). It is a disc that is
+   slid, never redrawn. */
+.bg i{position:absolute;left:-380px;top:-380px;width:760px;height:760px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,36,139,.1),rgba(178,102,255,.045) 55%,transparent);opacity:0;transition:opacity .8s;will-change:transform}
+.bg i[data-on]{opacity:1}
+
 .shell{width:min(1240px,100% - 2*var(--gut));margin:0 auto;padding:16px 0 64px}
+/* how far down a page the reader is: a thin pink line across the very top, drawn by the scroll itself. Only a
+   browser that can tie an animation to scrolling shows it. */
+@supports (animation-timeline:scroll()){
+.shell:has(>.doc)::before{content:"";position:fixed;z-index:5;inset:0 0 auto;height:2px;background:var(--brand);transform:scaleX(0);transform-origin:0 50%;animation:read linear both;animation-timeline:scroll(root)}
+}
+@keyframes read{to{transform:scaleX(1)}}
 
 /* the top of every page: the name, the site's pages, the way into the demo */
 .topbar{display:flex;flex-wrap:wrap;align-items:center;gap:0 36px;border-bottom:1px solid var(--border)}
@@ -56,7 +67,7 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 .tabs button:hover{color:var(--text)}
 .tabs button[aria-selected=true]{color:var(--text)}
 .tabs button[aria-selected=true]::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--text)}
-.network{display:inline-flex;align-items:center;gap:9px;min-height:44px;color:var(--text-muted);font-size:.8125rem;text-decoration:none}
+.network{display:inline-flex;align-items:center;gap:9px;min-height:44px;color:var(--text-muted);font-size:.8125rem;font-variant-numeric:tabular-nums;text-decoration:none}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(98,213,162,.16)}
 @media(max-width:560px){.tabs{gap:20px}.tabs button{font-size:.875rem}.network{display:none}}
 
@@ -99,11 +110,14 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 
 /* the fingerprint */
 .fingerprint p{margin:0}
-.fingerprint .label{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px}
+.fingerprint .label{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
 .hash{display:grid;grid-template-columns:repeat(4,max-content);justify-content:space-between;gap:4px 12px;font:400 .8125rem/1.5 var(--f-mono);color:var(--text-secondary);letter-spacing:.02em}
 @media(max-width:340px){.hash{grid-template-columns:repeat(2,max-content);justify-content:start;gap:4px 18px}}
 .barcode{display:flex;align-items:flex-end;gap:2px;height:34px;margin-top:14px}
-.barcode i{flex:1;min-width:1px;background:rgba(244,243,245,.2)}
+.barcode i{flex:1;min-width:1px;background:rgba(244,243,245,.2);transition:height .1s linear}
+/* how it works, step 1: a button swaps the fingerprint for the one the same file has with one byte changed (motion.tsx, OneByte) */
+.fingerprint .link-btn{min-height:32px}
+.fingerprint .byte-note{margin-top:14px;color:var(--text-muted);font-size:.8125rem;line-height:1.4}
 
 /* the answer */
 .panel{min-width:0}
@@ -114,6 +128,14 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 
 /* a framed block of the product: a title bar saying what it is and where it's from, then sections split by hairlines */
 .frame{min-width:0;border:1px solid var(--border-strong);border-radius:var(--r);background:rgba(13,14,18,.82);backdrop-filter:blur(6px);box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 32px 56px -40px #000}
+/* under a mouse, the edge of a framed block catches a light where the pointer is (motion.tsx, SiteMotion) */
+@media(hover:hover) and (pointer:fine){
+.frame{position:relative}
+.frame::before,.frame::after{content:"";position:absolute;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .4s}
+.frame::before{inset:0;background:radial-gradient(460px circle at var(--px,50%) var(--py,0px),rgba(255,214,236,.045),transparent 65%)}
+.frame::after{z-index:1;inset:-1px;padding:1px;background:radial-gradient(360px circle at var(--px,50%) var(--py,0px),rgba(255,186,226,.85),rgba(205,170,255,.3) 45%,transparent 72%);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.frame:hover::before,.frame:hover::after{opacity:1}
+}
 .frame>*{margin:0;padding:20px 22px}
 .frame>*+*{border-top:1px solid var(--border)}
 .frame>p{color:var(--text-muted);font-size:.875rem;line-height:1.5}
@@ -131,6 +153,15 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 @keyframes land{from{opacity:0;transform:translateY(6px)}}
 .finding-mark{grid-row:1/span 2;display:grid;place-items:center;width:44px;height:44px;border:1px solid color-mix(in srgb,var(--tone) 42%,transparent);border-radius:var(--r);background:color-mix(in srgb,var(--tone) 13%,transparent);color:var(--tone)}
 .finding-mark svg{width:22px;height:22px}
+/* when a verdict lands its mark is drawn on, stroke by stroke, and its box rings once in the verdict's colour */
+@media(prefers-reduced-motion:no-preference){
+.finding-mark{position:relative}
+.finding-mark svg path{stroke-dasharray:1;stroke-dashoffset:1;animation:draw .5s .18s cubic-bezier(.3,.7,.2,1) forwards}
+.finding-mark svg path+path{animation-delay:.42s}
+.finding:is([data-verdict=Real],[data-verdict=Unclear],[data-verdict=Fake]) .finding-mark::after{content:"";position:absolute;inset:-1px;border:1px solid var(--tone);border-radius:inherit;opacity:0;animation:ring .8s .25s ease-out}
+}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes ring{from{opacity:.8;transform:scale(1)}to{opacity:0;transform:scale(1.6)}}
 .finding-word{grid-column:2;align-self:end;margin:0;color:var(--text);font:600 1.625rem/1.2 var(--f-ui);letter-spacing:-.03em}
 .finding-word:last-child{grid-row:1/span 2;align-self:center}
 .finding-sub{grid-column:2;align-self:start;margin:2px 0 0;color:var(--text-secondary);font-size:.9375rem;line-height:1.45}
@@ -175,9 +206,17 @@ svg{width:16px;height:16px;flex:none;vertical-align:-3px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .card-act{margin-top:32px}
 /* a verified card's picture, the size a wallet shows it */
-.badge-art img{display:block;width:100%;max-width:440px;height:auto;margin:0 auto;border:1px solid var(--border)}
+.badge-art .tilt{max-width:440px;margin:0 auto}
+.badge-art img{display:block;width:100%;height:auto;border:1px solid var(--border)}
 .badge-art p{margin:14px 0 0;color:var(--text-muted);font-size:.875rem;text-align:center}
-.doc .badge-art img{max-width:none}
+.doc .badge-art .tilt{max-width:none}
+/* under a mouse the picture leans toward the pointer and a sheen follows it (motion.tsx, Tilt): the one thing on the
+   site a trader holds, shown as a thing to hold */
+.tilt{display:block;perspective:1100px}
+.tilt-in{position:relative;display:block;transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.tilt[data-live] .tilt-in{transition:transform .12s linear}
+.tilt-in::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(55% 55% at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.2),transparent 62%),linear-gradient(112deg,transparent 24%,rgba(255,60,150,.13) 40%,rgba(120,215,255,.11) 50%,rgba(180,125,255,.13) 60%,transparent 76%) var(--gx,50%) var(--gy,50%)/240% 240% no-repeat;mix-blend-mode:screen;opacity:0;transition:opacity .45s}
+.tilt[data-live] .tilt-in::after{opacity:1}
 
 /* buttons: the site's frosted pink glass for the main action, a hairline one for the rest */
 .btn-primary,.btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:var(--r);border:1px solid var(--border-strong);background:rgba(255,255,255,.02);font:500 .9375rem/1.2 var(--f-ui);letter-spacing:-.005em;cursor:pointer;transition:background .2s,border-color .2s}
@@ -186,6 +225,7 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 .btn-secondary:hover{border-color:var(--text-muted)}
 .btn-primary{border-color:var(--glass-edge);background:var(--glass);backdrop-filter:blur(14px)}
 .btn-primary:hover{background:var(--glass-hover)}
+.btn-primary:active,.btn-secondary:active{transform:translateY(1px)}
 .btn-primary:disabled{opacity:.45;cursor:not-allowed}
 
 /* forms */
@@ -224,6 +264,23 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
  mask-image:linear-gradient(90deg,transparent 2%,#000 34%,#000 90%,transparent),linear-gradient(0deg,transparent 3%,#000 22%,#000 90%,transparent);mask-composite:intersect}
 .doc-lede{margin:28px 0 0;max-width:44ch;color:var(--text-secondary);font-size:clamp(1.0625rem,1.5vw,1.25rem);line-height:1.5}
 .doc-cta{display:flex;flex-wrap:wrap;align-items:center;gap:14px 28px;margin:36px 0 0}
+/* under the two ways in: NEAR's newest block, to say the chain the site reads is live (motion.tsx, LiveBlock) */
+.doc-live{display:flex;align-items:center;gap:9px;min-height:24px;margin:28px 0 0;color:var(--text-muted);font-size:.8125rem;font-variant-numeric:tabular-nums}
+/* the top of a page arrives in order: its title, its sentence, then the ways on */
+@media(prefers-reduced-motion:no-preference){
+.doc-hero>div>*,.page-head>*{animation:arrive .7s cubic-bezier(.2,.7,.2,1) both}
+.doc-hero>div>:nth-child(2),.page-head>:nth-child(2){animation-delay:.07s}
+.doc-hero>div>:nth-child(3),.page-head>:nth-child(3){animation-delay:.14s}
+.doc-hero>div>:nth-child(4){animation-delay:.21s}
+.doc-art{animation:arrive-art 1.1s .1s cubic-bezier(.2,.7,.2,1) both}
+}
+@keyframes arrive{from{opacity:0;transform:translateY(14px)}}
+@keyframes arrive-art{from{opacity:0}}
+/* a number whose digits roll to their places (motion.tsx, Roll): each digit is a column of 0 to 9 */
+.roll{display:inline-flex;vertical-align:bottom;font-variant-numeric:tabular-nums}
+.roll>span[aria-hidden]{display:inline-flex;height:1lh;overflow:hidden}
+.roll-digit i{display:flex;flex-direction:column;font-style:normal;transition:transform 1.2s cubic-bezier(.16,.84,.24,1)}
+.roll-digit i span{display:block;height:1lh}
 /* a name from the code, inside a sentence */
 .doc :not(pre)>code{color:var(--text);font:400 .875em/1.4 var(--f-mono)}
 .bay-still{cursor:default}.bay-still:hover{border-color:var(--border);background:var(--surface)}.bay-still:hover::after{--t:rgba(244,243,245,.55)}
@@ -268,7 +325,11 @@ a.btn-primary,a.btn-secondary{color:var(--text);text-decoration:none}a.btn-prima
 /* the front page's three parts: what each is, where it stands, and the page for it */
 .trio{padding:24px 0 0}
 .trio ul{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px 56px;margin:0;padding:0;list-style:none}
-.trio li{display:flex;flex-direction:column;padding-top:20px;border-top:1px solid var(--border-strong)}
+.trio li{position:relative;display:flex;flex-direction:column;padding-top:20px;border-top:1px solid var(--border-strong)}
+@media(hover:hover) and (pointer:fine){
+.trio li::before{content:"";position:absolute;inset:-1px 0 auto;height:1px;pointer-events:none;background:radial-gradient(240px circle at var(--px,50%) 0,rgba(255,176,220,.95),transparent 70%);opacity:0;transition:opacity .4s}
+.trio li:hover::before{opacity:1}
+}
 .trio .status{margin-bottom:18px}
 .trio h2{font-size:1.375rem;letter-spacing:-.03em}
 .trio p{margin:12px 0 20px;color:var(--text-secondary);line-height:1.55}
@@ -373,7 +434,7 @@ button.ledger-row:hover,button.ledger-row[aria-expanded=true]{background:rgba(25
 .ledger-detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px 56px;padding:8px 22px 28px 114px;background:rgba(255,255,255,.03)}
 .ledger-detail[hidden]{display:none}
 .ledger-detail .label{margin-bottom:14px}
-.ledger-detail .badge-art img{max-width:320px;margin:0}
+.ledger-detail .badge-art .tilt{max-width:320px;margin:0}
 .ledger-detail .badge-art p{text-align:left}
 .ledger-held{margin:16px 0 0;color:var(--text-secondary);font-size:.875rem}
 .ledger-act{display:flex;flex-wrap:wrap;align-items:center;gap:10px 20px;margin:20px 0 0}
@@ -392,13 +453,29 @@ button.ledger-row:hover,button.ledger-row[aria-expanded=true]{background:rgba(25
 .onward{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 24px;margin:96px 0 0;padding:28px 0;border-top:1px solid var(--border-strong);border-bottom:1px solid var(--border-strong);color:var(--text);text-decoration:none}
 .onward span{color:var(--text-muted)}
 .onward strong{font:600 clamp(1.5rem,2.6vw,2rem)/1.1 var(--f-ui);letter-spacing:-.035em}
-.onward strong::after{content:"";display:inline-block;width:.5em;height:.5em;margin:0 .2em 0 .5em;border-top:2px solid currentColor;border-right:2px solid currentColor;transform:translateY(-.12em) rotate(45deg)}
+.onward strong::after{content:"";display:inline-block;width:.5em;height:.5em;margin:0 .2em 0 .5em;border-top:2px solid currentColor;border-right:2px solid currentColor;transform:translateY(-.12em) rotate(45deg);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.onward:hover strong::after{transform:translate(.24em,-.12em) rotate(45deg)}
+/* blocks further down a reading page rise into place as they are scrolled to (motion.tsx, SiteMotion). Only a block
+   that was out of view when the page opened is ever held back. */
+[data-rise]{transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+[data-rise=wait]{opacity:0;transform:translateY(22px)}
+@media print{[data-rise]{opacity:1!important;transform:none!important}}
+/* moving between pages (doc-parts.tsx, DocPage): the page's body leaves quickly and the next one arrives, a little
+   slower. The header stays where it is. */
+::view-transition{pointer-events:none}
+::view-transition-old(.page-out){animation:.14s ease-in both vt-fade reverse}
+::view-transition-new(.page-in){animation:.26s ease-out .1s both vt-fade,.44s cubic-bezier(.2,.8,.2,1) both vt-rise}
+::view-transition-group(site-header){animation:none;z-index:10}
+::view-transition-old(site-header){display:none}
+::view-transition-new(site-header){animation:none}
+@keyframes vt-fade{from{opacity:0}}
+@keyframes vt-rise{from{transform:translateY(12px)}}
 .doc{padding-bottom:72px}
 @media(max-width:940px){.doc-hero{flex-direction:column;align-items:stretch;min-height:0;padding:40px 0 24px}.doc-art{position:static;width:100%;aspect-ratio:5/4;margin-top:8px;object-fit:cover;object-position:88% 50%;transform:none;-webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 94%,transparent),linear-gradient(0deg,transparent,#000 22%,#000 86%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 94%,transparent),linear-gradient(0deg,transparent,#000 22%,#000 86%,transparent)}.step{padding-top:72px}.step-body{grid-template-columns:1fr}.step:nth-of-type(odd) .step-visual{order:0}.split{padding-top:64px}.trio ul,.three,.split-cols,.path{grid-template-columns:1fr}.pairs div{grid-template-columns:1fr}.faq .split{padding-top:44px}.page-head{padding-top:44px}.ledger{margin-top:64px}.ledger-cols,.ledger-row>.wide{display:none}.ledger-row{gap:0 16px;padding:12px 16px}.cols-cards,.cols-badges{grid-template-columns:72px minmax(0,1fr) 20px}.cols-cards>.ledger-thumb{grid-row:1/span 2}.cols-cards>.ledger-card,.cols-cards>.ledger-verdict{grid-column:2}.cols-cards>.ledger-chev{grid-column:3;grid-row:1/span 2}.cols-entries{grid-template-columns:72px minmax(0,1fr);gap:2px 16px}.cols-entries>.ledger-thumb{grid-column:1;grid-row:1/span 5;align-self:start;margin-top:4px}.cols-entries>:not(.ledger-thumb){grid-column:2}.ledger-detail{grid-template-columns:1fr;padding:8px 16px 24px}.frame>.ledger-head,.ledger-tools,.ledger-foot,.ledger-empty,.ledger-lead,.ledger-pay{padding-inline:16px}.ledger-panel>.busy{padding:0 16px}.ledger-panel>.note{margin:16px}.ledger-pay{grid-template-columns:1fr}.ledger-find,.ledger-find div{flex:1 1 auto}.ledger-find input{width:100%;font-size:1rem}.onward{margin-top:64px}}
 
 @media(max-width:700px){.ledger-head>a{display:none}}
 @media(max-width:560px){.tab-long{display:none}.tab-short{display:inline}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}::view-transition-old(*),::view-transition-new(*),::view-transition-group(*){animation-duration:0s!important;animation-delay:0s!important}}
 
 /* the "try to break it" page: a message to the model on the left, what then happened on the right */
 .attempt{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:32px 64px;align-items:start;padding-top:48px}
@@ -428,7 +505,7 @@ button.ledger-row:hover,button.ledger-row[aria-expanded=true]{background:rgba(25
 
 /* a verified card's own page: what the contract holds beside its picture, then its history */
 .card-page{padding-top:48px}
-.card-page .badge-art img{max-width:none}
+.card-page .badge-art .tilt{max-width:none}
 .card-events{margin-top:32px}
 .card-source{margin:24px 0 0;max-width:78ch;font-size:.875rem;line-height:1.5}
 .log-who time{font-variant-numeric:tabular-nums}

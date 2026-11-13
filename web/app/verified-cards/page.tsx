@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { DocPage, Onward, PageHead, REPO, Row, Rows, Section } from "../doc-parts";
 import { ExternalIcon } from "../icons";
+import { Tilt } from "../motion";
 import { ExampleTag, Frame, Status } from "../parts";
 
 export const metadata: Metadata = {
@@ -38,14 +39,16 @@ export default function VerifiedCards() {
           </div>
           <Frame title="What the trader holds" aside={<ExampleTag />}>
             <div className="badge-art">
-              <Image
-                src="/art/verified-badge-example.png"
-                alt="A badge picture: a Tally PnL card with a green Verified on NEAR stamp, the card's code and the date it was recorded"
-                width={1200}
-                height={1200}
-                sizes="(max-width: 940px) 92vw, 520px"
-                loading="eager"
-              />
+              <Tilt>
+                <Image
+                  src="/art/verified-badge-example.png"
+                  alt="A badge picture: a Tally PnL card with a green Verified on NEAR stamp, the card's code and the date it was recorded"
+                  width={1200}
+                  height={1200}
+                  sizes="(max-width: 940px) 92vw, 520px"
+                  loading="eager"
+                />
+              </Tilt>
             </div>
             <p>The trader&apos;s own Tally card with a stamp. Wallets and explorers show it for the NFT.</p>
           </Frame>

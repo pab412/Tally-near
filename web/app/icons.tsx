@@ -40,34 +40,37 @@ export const LockIcon = () => (
 
 export const SealIcon = () => (
   <svg {...base}>
-    <path d="M10 2.5 16 5v4.5c0 3.6-2.5 6.6-6 8-3.5-1.4-6-4.4-6-8V5z" />
-    <path d="m7.2 9.8 2 2 3.6-3.8" />
+    <path d="M10 2.5 16 5v4.5c0 3.6-2.5 6.6-6 8-3.5-1.4-6-4.4-6-8V5z" pathLength={1} />
+    <path d="m7.2 9.8 2 2 3.6-3.8" pathLength={1} />
   </svg>
 );
 
-// The marks for what a check found, and for the short messages inside a panel.
+// The marks for what a check found, and for the short messages inside a panel. Each stroke is given a length of 1,
+// so a mark can be drawn on by its stroke when a verdict lands (globals.css, .finding-mark).
 
 export const CheckIcon = () => (
   <svg {...base}>
-    <path d="m4.5 10.5 3.5 3.5 7.5-8" />
+    <path d="m4.5 10.5 3.5 3.5 7.5-8" pathLength={1} />
   </svg>
 );
 
 export const CrossIcon = () => (
   <svg {...base}>
-    <path d="m5.5 5.5 9 9M14.5 5.5l-9 9" />
+    <path d="m5.5 5.5 9 9" pathLength={1} />
+    <path d="M14.5 5.5l-9 9" pathLength={1} />
   </svg>
 );
 
 export const QuestionIcon = () => (
   <svg {...base}>
-    <path d="M7.4 7.6a2.6 2.6 0 1 1 4 2.2c-.8.5-1.4 1.1-1.4 2.1M10 15.1v.1" />
+    <path d="M7.4 7.6a2.6 2.6 0 1 1 4 2.2c-.8.5-1.4 1.1-1.4 2.1" pathLength={1} />
+    <path d="M10 15.1v.1" pathLength={1} />
   </svg>
 );
 
 export const MinusIcon = () => (
   <svg {...base}>
-    <path d="M5 10h10" />
+    <path d="M5 10h10" pathLength={1} />
   </svg>
 );
 

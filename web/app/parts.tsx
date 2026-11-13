@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { barHeight } from "@/lib/motion";
 import {
   explorerAccountUrl,
   explorerTxUrl,
@@ -68,7 +69,7 @@ export function Status() {
 /** The top of every page: the name, the site's few pages, and the way into the demo. */
 export function SiteHeader({ current }: { current: PageId }) {
   return (
-    <header className="topbar">
+    <header className="topbar" style={{ viewTransitionName: "site-header" }}>
       <Wordmark />
       <nav className="topnav" aria-label="Pages">
         {PAGES.map((page) => (
@@ -92,28 +93,12 @@ export function SiteHeader({ current }: { current: PageId }) {
   );
 }
 
-/** A fingerprint as the page shows it: the 64 characters in eight groups, and the same characters as bars. */
-export function Fingerprint({ fp }: { fp: string }) {
-  return (
-    <>
-      <p className="hash" aria-label={fp}>
-        {fp.match(/.{8}/g)!.map((group, i) => (
-          <span key={i} aria-hidden>
-            {group}
-          </span>
-        ))}
-      </p>
-      <Bars of={fp} />
-    </>
-  );
-}
-
 /** A fingerprint's characters as bars: the higher the character, the taller its bar. */
 export function Bars({ of }: { of: string }) {
   return (
     <span className="barcode" aria-hidden>
       {of.split("").map((c, i) => (
-        <i key={i} style={{ height: `${((parseInt(c, 16) + 2) / 17) * 100}%` }} />
+        <i key={i} style={{ height: `${barHeight(c)}%` }} />
       ))}
     </span>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { SiteMotion } from "./motion";
 
 // Tally's own type (tallypnl.com): Geist for text, Geist Mono for the fingerprint and ids.
 const sans = Geist({ variable: "--font-sans", subsets: ["latin"] });
@@ -15,7 +16,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>
-        <div className="bg" aria-hidden />
+        <div className="bg" aria-hidden>
+          <i />
+        </div>
+        <SiteMotion />
         {children}
       </body>
     </html>

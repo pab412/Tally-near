@@ -101,6 +101,24 @@ export async function viewCall<T>(method: string, args: object, opts: NearOption
   }
 }
 
+/**
+ * The height of NEAR's newest final block, asked of the same public node the records are read from. The page shows
+ * it to say the chain it reads is live. Null, never a guess, when the node doesn't answer with one.
+ */
+export async function blockHeight(opts: NearOptions = {}): Promise<number | null> {
+  try {
+    const res = await (opts.fetch ?? fetch)(opts.rpcUrl ?? RPC_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: "tally", method: "block", params: { finality: "final" } }),
+    });
+    const height: unknown = res.ok ? (await res.json())?.result?.header?.height : null;
+    return typeof height === "number" && Number.isSafeInteger(height) && height > 0 ? height : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A card's record on the registry: its latest verdict and how many entries it has. Null when Tally never checked it. */
 export async function latestRecord(fingerprint: string, opts: NearOptions = {}): Promise<ProofRecord | null> {
   if (!isFingerprint(fingerprint)) throw new LookupError("That isn't a card fingerprint.");

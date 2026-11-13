@@ -7,6 +7,7 @@ import { sampleFingerprints } from "@/lib/sample";
 import { DocPage, REPO } from "./doc-parts";
 import { ExternalIcon } from "./icons";
 import { Ledger, type KnownCard } from "./ledger";
+import { LiveBlock } from "./motion";
 import { SAMPLES, Status } from "./parts";
 
 // The front page (the owner, 2026-11-10: the panther page is what people should see first, and "I dont like how
@@ -43,6 +44,9 @@ export default function Home() {
             <a href={REPO} target="_blank" rel="noreferrer">
               Read the code <ExternalIcon />
             </a>
+          </p>
+          <p className="doc-live">
+            <span className="dot" aria-hidden /> <LiveBlock />
           </p>
         </div>
         {/* Tally's own panther, drawn for this page, holding a phone over its head with both paws. The card on the screen is a real Tally card

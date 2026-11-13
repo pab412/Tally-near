@@ -8,7 +8,8 @@ import { sampleFingerprints } from "@/lib/sample";
 import { DocPage, Onward, PageHead, REPO, Row, Rows, Section, Step } from "../doc-parts";
 import { ExternalIcon } from "../icons";
 import { LiveRecord } from "../live";
-import { ExampleTag, Fingerprint, Frame, History, LiveTag } from "../parts";
+import { OneByte } from "../motion";
+import { ExampleTag, Frame, History, LiveTag } from "../parts";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -43,14 +44,7 @@ export default function HowItWorks() {
                 <Image src={`/samples/${SAMPLE}`} alt="A made-up PnL card showing a 38.21% gain" width={1600} height={900} sizes="(max-width: 940px) 92vw, 620px" priority />
               </div>
             </div>
-            <div className="fingerprint">
-              <p className="label">This card&apos;s fingerprint</p>
-              <Fingerprint fp={SAMPLE_FP} />
-            </div>
-            <div className="fingerprint">
-              <p className="label">The same file with one byte changed</p>
-              <Fingerprint fp={NUDGED_FP} />
-            </div>
+            <OneByte fp={SAMPLE_FP} changed={NUDGED_FP} />
           </Frame>
         }
       >

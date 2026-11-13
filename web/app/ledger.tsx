@@ -27,7 +27,8 @@ import { inNear } from "@/scripts/agent-rule.mjs";
 import { useRecordLink } from "./copy-link";
 import { AlertIcon, ExternalIcon, SearchIcon } from "./icons";
 import { TermsFacts } from "./live";
-import { Bars, Busy, Fact, Fingerprint, History, MARK, Note } from "./parts";
+import { Fingerprint, Roll, Tilt } from "./motion";
+import { Bars, Busy, Fact, History, MARK, Note } from "./parts";
 
 /** A card the site can name: one of its own samples, or the README's example record. */
 export interface KnownCard {
@@ -115,7 +116,11 @@ export function Ledger({
               <button key={t.id} type="button" role="tab" id={`ledger-tab-${t.id}`} aria-selected={tab === t.id} aria-controls={`ledger-panel-${t.id}`} onClick={() => setTab(t.id)}>
                 <span className="tab-long">{t.label}</span>
                 <span className="tab-short">{t.short}</span>
-                {counts[t.id] != null && <b>{counts[t.id]!.toLocaleString("en-US")}</b>}
+                {counts[t.id] != null && (
+                  <b>
+                    <Roll value={counts[t.id]!} />
+                  </b>
+                )}
               </button>
             ))}
           </div>
@@ -510,8 +515,10 @@ function BadgeRow({
           <div className="badge-art">
             {/* the picture is asked for only once its row is open */}
             {open && (
-              // eslint-disable-next-line @next/next/no-img-element -- drawn fresh by /badge each time, so it's never a stale copy
-              <img src={badgePath(fp)} alt={`${card?.label ?? "This card"}'s verified card: the card with a Verified on NEAR stamp`} width={1200} height={1200} />
+              <Tilt>
+                {/* eslint-disable-next-line @next/next/no-img-element -- drawn fresh by /badge each time, so it's never a stale copy */}
+                <img src={badgePath(fp)} alt={`${card?.label ?? "This card"}'s verified card: the card with a Verified on NEAR stamp`} width={1200} height={1200} />
+              </Tilt>
             )}
             <p>The picture wallets and explorers show for this NFT.</p>
           </div>
@@ -616,6 +623,9 @@ function CopyLink({ fp }: { fp: string }) {
 
 const Count = ({ n, one, many }: { n: number; one: string; many: string }) => (
   <>
-    <b>{n.toLocaleString("en-US")}</b> {n === 1 ? one : many}
+    <b>
+      <Roll value={n} />
+    </b>{" "}
+    {n === 1 ? one : many}
   </>
 );

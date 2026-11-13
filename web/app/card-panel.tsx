@@ -6,6 +6,7 @@ import { badgePath } from "@/lib/fingerprint";
 import { explorerAccountUrl, explorerTxUrl, formatDay, isTestnetAccount, shortFingerprint } from "@/lib/near";
 import { inNear } from "@/scripts/agent-rule.mjs";
 import { AlertIcon, ExternalIcon, SealIcon } from "./icons";
+import { Tilt } from "./motion";
 import { Busy, Fact, Finding, Frame, Note, SwitchedOff, send, type Card, type LookState } from "./parts";
 
 type Act =
@@ -98,8 +99,10 @@ export function CardPanel({
               </Finding>
               {verdict === "Real" && (
                 <div className="badge-art">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- drawn fresh by /badge each time, so it's never a stale copy */}
-                  <img src={badgePath(held.fingerprint)} alt="The verified card's picture: this card with a Verified on NEAR stamp" width={1200} height={1200} />
+                  <Tilt>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- drawn fresh by /badge each time, so it's never a stale copy */}
+                    <img src={badgePath(held.fingerprint)} alt="The verified card's picture: this card with a Verified on NEAR stamp" width={1200} height={1200} />
+                  </Tilt>
                   <p>The picture wallets and explorers show for this NFT.</p>
                 </div>
               )}
