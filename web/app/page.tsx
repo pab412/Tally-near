@@ -4,16 +4,21 @@ import Link from "next/link";
 import { DEMO_PATH } from "@/lib/fingerprint";
 import { CARD_CONTRACT_ID, CHECK_CONTRACT_ID, CONTRACT_ID, DEMO_RECORD_FP, TALLY_CHECKS_PATH } from "@/lib/near";
 import { sampleFingerprints } from "@/lib/sample";
-import { DocPage, REPO } from "./doc-parts";
+import { DocPage, REPO, Section } from "./doc-parts";
 import { ExternalIcon } from "./icons";
 import { Ledger, type KnownCard } from "./ledger";
-import { LiveBlock } from "./motion";
-import { SAMPLES, Status } from "./parts";
+import { LiveBlock, Tilt } from "./motion";
+import { Frame, SAMPLES, Status } from "./parts";
 
 // The front page (the owner, 2026-11-10: the panther page is what people should see first, and "I dont like how
 // everything is on the same page"): the headline, the three things this is, and the way on to each. The detail
-// lives on its own pages. Under the three sits the ledger (the owner, 2026-11-11, of the ledger mock-up: "add this
-// part to the main webpage underneath"): what the contracts hold right now, read from NEAR as the page opens.
+// lives on its own pages. Under the three, a real Tally card (the owner, 2026-11-14: "put this on the demo for near"):
+// his own Fomo trade, made into a card on tallypnl.com only after Tally found the trade on Solana. Then the ledger (the
+// owner, 2026-11-11, of the ledger mock-up: "add this part to the main webpage underneath"): what the contracts hold
+// right now, read from NEAR as the page opens.
+
+/** The real card's own page on Tally, where anyone can see the trade it was matched to. */
+const REAL_CARD = "https://tallypnl.com/card/237ebbb97807";
 
 // The cards the ledger can ask NEAR about by name: the registry keeps no list, so the site names the ones it knows.
 // These are its own made-up samples, their fingerprints computed from the real files, and the README's example record.
@@ -84,6 +89,36 @@ export default function Home() {
           </li>
         </ul>
       </section>
+
+      <Section id="real" kicker="Live on tallypnl.com" title="A real card, backed by a real trade.">
+        <div className="split-cols">
+          <div className="prose">
+            <p>pab put $99 into $Grok Pot on Fomo and sold for +$262.79, a 265% gain.</p>
+            <p>
+              Tally made this card only after it found the trade on Solana: the wallet&apos;s trade matched the card&apos;s gain within a point, and its profit
+              and amount in exactly. If Tally can&apos;t find the trade, it doesn&apos;t make the card.
+            </p>
+            <p>
+              <a href={REAL_CARD} target="_blank" rel="noreferrer">
+                See the card and its trade on Tally <ExternalIcon />
+              </a>
+            </p>
+          </div>
+          <Frame title="Verified on-chain by Tally" aside={<span className="tag">Real trade</span>}>
+            <div className="badge-art">
+              <Tilt>
+                <Image
+                  src="/real/grok-pot-card.webp"
+                  alt="A Tally PnL card marked verified on-chain: $Grok Pot, plus 265 percent, plus $262.79 on $99 in, a Fomo card by pab"
+                  width={1600}
+                  height={900}
+                  sizes="(max-width: 940px) 92vw, 560px"
+                />
+              </Tilt>
+            </div>
+          </Frame>
+        </div>
+      </Section>
 
       <Ledger contractId={CONTRACT_ID} cardContractId={CARD_CONTRACT_ID} checkContractId={CHECK_CONTRACT_ID} known={KNOWN} tallyUrl={TALLY_CHECKS_PATH} />
     </DocPage>
