@@ -14,6 +14,17 @@ An AI agent can pay for a check with the **paid check** contract. Its owner load
 
 A wallet can ask in the same call that would send the money. The **guard wallet** is a small example of that: it pays the holder of a card the registry says is Real, and refuses everything else, with the reason. It is an example on testnet, not a product people hold money in, and no wallet outside this repository asks the registry today.
 
+## What it looks like
+
+Screenshots of the live site, on NEAR testnet, with made-up sample cards.
+
+| | |
+|---|---|
+| ![The demo page: a card Tally checked, shown as Real, with its earlier Fake verdict still in the history](docs/screenshots/demo-real-with-history.png) | ![The demo page: a card Tally never checked, shown as No record](docs/screenshots/demo-no-record.png) |
+| **A card Tally checked:** Real, and the earlier Fake verdict is still in its history. | **A card Tally never checked:** No record. |
+| ![The verified card tab: the NFT is Held, with the picture wallets show for it](docs/screenshots/verified-card.png) | ![A verified card's own page: holder, what it holds, and that the payments add up](docs/screenshots/card-page.png) |
+| **A verified card:** an NFT only a card found Real can hold. | **The card's own page:** who holds it, what it holds, and that the payments add up. |
+
 ## Check it yourself in 60 seconds
 
 Everything below is live on NEAR testnet. The first two need nothing installed.
