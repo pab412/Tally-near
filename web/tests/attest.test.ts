@@ -38,13 +38,6 @@ describe("Tally's own checks", () => {
     expect(sign).not.toHaveBeenCalled();
   });
 
-  it("takes Tally's secret when this site's copy was pasted with a stray space or line break (Tally trims its own)", async () => {
-    const sign = signer();
-    expect((await handleAttest(good, ENV.secret!, { ...ENV, secret: ` ${ENV.secret}\n` }, sign, none)).status).toBe(200);
-    expect((await handleAttest(good, ENV.secret!, { ...ENV, secret: " \n" }, sign, none)).status, "a copy that is only spaces is no secret").toBe(503);
-    expect(sign).toHaveBeenCalledTimes(1);
-  });
-
   it("refuses anyone without Tally's secret, before it looks at what was sent", async () => {
     const sign = signer();
     const latest = vi.fn<Latest>(none);

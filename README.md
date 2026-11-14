@@ -436,7 +436,7 @@ The demo records sample checks. Tally's real ones arrive another way: Tally's se
 - **Only unclaimed money is lost with a burned card.** A holder can withdraw whenever the registry says Real, so a card that is corrected later loses what it holds at that moment, not what was already taken out.
 - **The paid check is a choice.** Records are public, so an agent can read them for free. It pays for the receipt and to reward the trader.
 - **The demo's write buttons sit behind one shared password, with no limit on attempts.** That is why the keys behind them are function-call keys: each can only call `record`, or `mint` and `recheck`, on testnet, with a 0.25 NEAR gas allowance. A guessed password could add sample records to the testnet registry and nothing more: the demo asks the registry first and won't write over, or mint, a card whose latest entry is one of Tally's own checks, and on the hosted registry it leaves the site's example cards as they are.
-- **Tally's server can write a verdict too**, through `/api/attest`, with a secret in place of the demo's password. It signs with the same function-call key, so the same limits hold: `record` only, testnet only.
+- **Tally's server can write a verdict too**, through `/api/attest`, with a secret in place of the demo's password. It signs with the same function-call key, so the same limits hold: `record` only, testnet only. Anyone can ask `GET /api/attest` whether those writes can go through: the public half of the key the site signs with, whether NEAR lets that key call `record` on the registry, and its gas allowance left (never the key).
 - **The picture is drawn off-chain**, by this site. The token's link carries only the fingerprint, and the record on NEAR is what counts.
 
 ## Built with

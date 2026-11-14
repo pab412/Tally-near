@@ -37,13 +37,11 @@ const CHECK_ID = /^[a-z0-9_-]{1,32}$/;
 export const SAMPLE_MARK = "sample-";
 
 export async function handleAttest(body: unknown, bearer: string | null, env: AttestEnv, sign: Sign, latest: Latest): Promise<AttestResult> {
-  // (a copy pasted into the host's settings with a stray space or line break still matches: Tally trims its own copy)
-  const secret = env.secret?.trim();
-  if (!secret || !env.account || !env.key) return fail(503, "Tally's own checks are switched off on this copy of the page.");
+  if (!env.secret || !env.account || !env.key) return fail(503, "Tally's own checks are switched off on this copy of the page.");
   if (!onTestnet(env.account, env.contractId)) return fail(503, "This site only writes to NEAR testnet.");
   const guesses = env.guesses ?? GUESSES;
   if (guesses.blocked(env.address)) return fail(429, TOO_MANY_GUESSES);
-  if (!bearer || !samePassword(bearer, secret)) {
+  if (!bearer || !samePassword(bearer, env.secret)) {
     guesses.missed(env.address);
     return fail(401, "Not allowed.");
   }
